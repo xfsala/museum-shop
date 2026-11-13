@@ -1,0 +1,1249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Museum Gift Shop</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Arabic:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: full-bleed 3D platform behind one centred step card; researcher drawer and walking pad pinned to corners.
+   Single dark look by choice: the page is a night-time station, so UI stays dark in every theme. */
+:root{
+  --ground:#0c1211;
+  --panel:#121a19;
+  --panel-2:#192423;
+  --line:#2c3b39;
+  --fg:#eef3f1;
+  --muted:#a6b8b4;
+  --teal:#5F9890;
+  --teal-hi:#72aaa2;
+  --mint:#BDD5D2;
+  --plum:#925274;
+  --amber:#e3a046;
+  --on-teal:#07110f;
+  --sans:"IBM Plex Sans","IBM Plex Sans Arabic",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+  color-scheme:dark;
+}
+html,body{height:100%}
+body{background:var(--ground);color:var(--fg);font-family:var(--sans);font-size:15px;line-height:1.55;overflow:hidden}
+#scene{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}
+#scene:active{cursor:grabbing}
+
+.ov{position:fixed;inset:0;z-index:5;display:grid;place-items:center;
+  padding-block:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-bottom,0px));
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  background:rgba(8,12,12,.86);backdrop-filter:blur(3px)}
+.card{width:min(600px,100%);max-height:100%;overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:14px;
+  padding:28px clamp(18px,4vw,32px);display:flex;flex-direction:column;gap:16px;box-shadow:0 24px 60px rgba(0,0,0,.5)}
+.eyebrow{font:500 12px/1.3 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--mint);margin:0}
+h1{font-size:clamp(26px,5vw,34px);line-height:1.15;margin:0;font-weight:600;text-wrap:balance}
+h2{font-size:22px;line-height:1.25;margin:0;font-weight:600;text-wrap:balance}
+p{margin:0;color:var(--muted);max-width:62ch}
+p strong{color:var(--fg);font-weight:600}
+ul.plain{margin:0;padding-left:18px;color:var(--muted);display:grid;gap:4px}
+code{font-family:var(--mono);font-size:.92em;color:var(--mint)}
+:focus-visible{outline:2px solid var(--mint);outline-offset:2px}
+
+.btn{appearance:none;border:1px solid var(--teal);border-radius:10px;background:var(--teal);color:var(--on-teal);
+  font:600 15px var(--sans);padding:11px 18px;min-height:44px;cursor:pointer}
+.btn:hover:not(:disabled){background:var(--teal-hi);border-color:var(--teal-hi)}
+.btn.ghost{background:transparent;color:var(--fg);border-color:var(--line)}
+.btn.ghost:hover:not(:disabled){background:var(--panel-2);border-color:var(--teal)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+
+.prog{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;counter-reset:s}
+.prog li{counter-increment:s;font:500 11px/1.25 var(--mono);text-transform:uppercase;letter-spacing:.06em;color:var(--muted);border-top:3px solid var(--line);padding-top:8px;min-width:0}
+.prog li::before{content:counter(s) "  "}
+.prog li.on{color:var(--fg);border-color:var(--teal)}
+.prog li.done{border-color:var(--mint)}
+
+.facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:0}
+.facts div{border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--panel-2);min-width:0}
+.facts dt{font:500 11px/1.3 var(--mono);text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.facts dd{margin:4px 0 0;font-weight:600}
+@media (max-width:520px){.facts{grid-template-columns:1fr}}
+
+.checks{display:grid;gap:8px}
+.check{display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--panel-2);cursor:pointer}
+.check input{width:20px;height:20px;accent-color:var(--teal);margin:2px 0 0;flex:none}
+.check:has(input:checked){border-color:var(--teal)}
+
+.ears{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.counter{font:500 13px var(--mono);color:var(--mint);font-variant-numeric:tabular-nums}
+.msg{padding:10px 14px;border-radius:10px;background:var(--panel-2);border:1px solid var(--line);color:var(--fg);margin:0}
+.msg.ok{border-color:var(--teal)}
+.msg.warn{border-color:var(--amber)}
+
+.vol{display:grid;gap:6px}
+input[type=range]{width:100%;accent-color:var(--teal)}
+
+.swatches{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:8px;background:#000;padding:16px;border-radius:10px}
+.swatches button{aspect-ratio:1;max-width:100%;border:0;border-radius:4px;cursor:pointer;padding:0}
+.swatches button.picked{outline:2px solid var(--mint);outline-offset:3px}
+
+form{display:flex;flex-direction:column;gap:14px}
+fieldset.q{border:0;border-top:1px solid var(--line);margin:0;padding:14px 0 0;display:grid;gap:8px;min-width:0}
+fieldset.q legend{float:left;width:100%;padding:0;margin-bottom:8px;font-weight:600;color:var(--fg)}
+fieldset.q.missing legend{color:var(--amber)}
+.scale{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
+.scale label,.choices label{position:relative}
+.scale input,.choices input{position:absolute;opacity:0;inset:0;margin:0;cursor:pointer}
+.scale span{display:grid;place-items:center;height:42px;border:1px solid var(--line);border-radius:8px;background:var(--panel-2);font-variant-numeric:tabular-nums}
+.choices{display:flex;flex-wrap:wrap;gap:6px}
+.choices span{display:inline-block;padding:8px 14px;border:1px solid var(--line);border-radius:999px;background:var(--panel-2)}
+.scale input:checked+span,.choices input:checked+span{background:var(--teal);color:var(--on-teal);border-color:var(--teal);font-weight:600}
+.scale input:focus-visible+span,.choices input:focus-visible+span{outline:2px solid var(--mint);outline-offset:2px}
+.ends{display:flex;justify-content:space-between;gap:12px;font-size:12px;color:var(--muted)}
+.dur{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.dur input{width:84px;padding:9px 10px;border-radius:8px;border:1px solid var(--line);background:var(--panel-2);color:var(--fg);font:500 15px var(--sans);font-variant-numeric:tabular-nums}
+.dur label{color:var(--muted);font-size:13px}
+.err{color:var(--amber)}
+
+.tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.tiles div{border:1px solid var(--line);border-radius:10px;padding:12px;background:var(--panel-2);min-width:0}
+.tiles dt{font:500 11px var(--mono);text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.tiles dd{margin:4px 0 0;font-size:18px;font-weight:600;font-variant-numeric:tabular-nums}
+pre.data{margin:0;max-height:240px;overflow:auto;background:#0a0f0e;border:1px solid var(--line);border-radius:10px;padding:12px;font:12px/1.5 var(--mono);color:var(--mint)}
+
+.hud{position:fixed;z-index:3;top:calc(14px + env(safe-area-inset-top,0px));left:calc(14px + env(safe-area-inset-left,0px));
+  display:flex;gap:10px;align-items:center;max-width:calc(100% - 28px);padding:8px 14px;border-radius:999px;background:rgba(10,14,14,.72);border:1px solid var(--line);font-size:13px}
+.hud .dot{width:8px;height:8px;border-radius:50%;background:var(--amber);flex:none}
+.toast{position:fixed;z-index:3;top:calc(64px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);width:max-content;max-width:calc(100% - 32px);
+  padding:10px 16px;border-radius:10px;background:rgba(10,14,14,.85);border:1px solid var(--line);font-size:14px;text-align:center}
+.board{position:fixed;z-index:4;left:50%;transform:translateX(-50%);bottom:calc(28px + env(safe-area-inset-bottom,0px));
+  font-size:17px;padding:14px 28px;min-height:52px;box-shadow:0 10px 30px rgba(0,0,0,.45)}
+@media (prefers-reduced-motion:no-preference){.board{animation:lift 1.6s ease-in-out infinite}}
+@keyframes lift{50%{transform:translateX(-50%) translateY(-3px)}}
+
+.pad{position:fixed;z-index:3;right:calc(16px + env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));
+  display:grid;grid-template-columns:repeat(3,52px);grid-template-rows:repeat(2,52px);gap:6px}
+.pad button{border:1px solid var(--line);border-radius:12px;background:rgba(10,14,14,.75);color:var(--fg);font-size:20px;touch-action:none;user-select:none;-webkit-user-select:none}
+.pad button:active{background:var(--teal);color:var(--on-teal)}
+.pad .up{grid-column:2;grid-row:1}.pad .left{grid-column:1;grid-row:2}.pad .down{grid-column:2;grid-row:2}.pad .right{grid-column:3;grid-row:2}
+
+.rbtn{position:fixed;z-index:8;left:calc(14px + env(safe-area-inset-left,0px));bottom:calc(14px + env(safe-area-inset-bottom,0px));
+  font:500 12px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--mint);background:rgba(10,14,14,.8);border:1px dashed var(--plum);border-radius:8px;padding:8px 12px;cursor:pointer}
+.rpanel{position:fixed;z-index:9;top:calc(12px + env(safe-area-inset-top,0px));bottom:calc(12px + env(safe-area-inset-bottom,0px));right:calc(12px + env(safe-area-inset-right,0px));
+  width:min(350px,calc(100% - 24px));overflow:auto;background:var(--panel);border:1px solid var(--plum);border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:14px;box-shadow:0 24px 60px rgba(0,0,0,.55)}
+.rpanel header{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.rpanel h3{margin:0;font-size:16px}
+.rpanel .x{background:none;border:1px solid var(--line);color:var(--fg);border-radius:8px;width:34px;height:34px;font-size:18px;cursor:pointer}
+.rpanel .note{font-size:13px}
+.rpanel fieldset{border:1px solid var(--line);border-radius:10px;margin:0;padding:12px;display:grid;gap:8px;min-width:0}
+.rpanel legend{font:500 11px var(--mono);text-transform:uppercase;letter-spacing:.06em;color:var(--mint);padding:0 4px}
+.rpanel label{font-size:13px;color:var(--muted);display:flex;justify-content:space-between;gap:8px}
+.rpanel output{color:var(--fg);font-variant-numeric:tabular-nums}
+.rpanel select{width:100%;padding:8px;border-radius:8px;background:var(--panel-2);color:var(--fg);border:1px solid var(--line);font:14px var(--sans)}
+.rpanel .chk{justify-content:flex-start;align-items:center}
+.rpanel .chk input{accent-color:var(--teal)}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.seg button{padding:8px 6px;border-radius:8px;border:1px solid var(--line);background:var(--panel-2);color:var(--fg);font:500 13px var(--sans);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--plum);border-color:var(--plum);color:#fff}
+.ractions{display:grid;gap:8px}
+[hidden]{display:none!important}
+.fade{position:fixed;inset:0;z-index:4;background:#000;pointer-events:none;opacity:0}
+
+[hidden]{display:none!important}
+.fade{position:fixed;inset:0;z-index:4;background:#000;pointer-events:none;opacity:0}
+.hud{max-width:calc(100% - 250px)}
+@media (max-width:560px){.hud{display:none!important}.ov{padding-bottom:max(64px,env(safe-area-inset-bottom,0px))}
+  .toast{top:calc(108px + env(safe-area-inset-top,0px))}.board{bottom:calc(140px + env(safe-area-inset-bottom,0px));font-size:15px;white-space:nowrap}.pcard{bottom:calc(60px + env(safe-area-inset-bottom,0px))}}
+.basket{position:fixed;z-index:3;top:calc(14px + env(safe-area-inset-top,0px));right:calc(14px + env(safe-area-inset-right,0px));
+  min-width:200px;padding:10px 14px;border-radius:12px;background:rgba(10,14,14,.8);border:1px solid var(--line);font-size:13px;display:grid;gap:2px}
+.basket .bt{font:500 11px var(--mono);text-transform:uppercase;letter-spacing:.06em;color:var(--mint)}
+.basket .bn{font-weight:600;color:var(--fg)} .basket .bs{color:var(--muted);font-variant-numeric:tabular-nums}
+.bar{height:6px;background:var(--panel-2);border-radius:3px;margin-top:6px;overflow:hidden}.bar i{display:block;height:100%;width:0;background:var(--teal);transition:width .3s}
+.pcard{position:fixed;z-index:6;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));width:min(440px,calc(100% - 32px));
+  max-height:calc(100% - 120px);overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 20px;display:flex;flex-direction:column;gap:12px;box-shadow:0 20px 50px rgba(0,0,0,.55)}
+.pcard h3{margin:0;font-size:18px;line-height:1.3}
+.pcard .ar{margin-top:2px;color:var(--muted);font-family:"IBM Plex Sans Arabic",var(--sans)}
+.ph{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.pp{margin:0;font-size:24px;font-weight:600;color:var(--fg);white-space:nowrap;font-variant-numeric:tabular-nums}.pp span{font-size:13px;color:var(--muted);font-weight:500}
+.lab{display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;padding:8px 12px;border-radius:8px;background:#1f6b4a;color:#fff;font-weight:600;font-size:13px;max-width:none}
+.story{border-left:3px solid #c9a24a;padding-left:12px;display:grid;gap:4px}.story p{color:var(--fg)}
+.seg3{grid-template-columns:1fr 1fr 1fr}
+.bview{margin-top:8px;appearance:none;border:1px solid var(--line);background:var(--panel-2);color:var(--fg);border-radius:8px;padding:7px 10px;font:500 13px var(--sans);cursor:pointer;min-height:34px}
+.bview:hover{border-color:var(--teal)}
+.blist{list-style:none;margin:6px 0 0;padding:0;display:grid;gap:6px;max-height:min(46vh,320px);overflow:auto}
+.blist li{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--panel-2)}
+.blist .nm{display:grid;gap:1px;min-width:0}.blist .nm b{font-weight:600;color:var(--fg);font-size:13px}.blist .nm span{color:var(--muted);font-size:12px;font-variant-numeric:tabular-nums}
+.blist button{appearance:none;border:1px solid var(--line);background:transparent;color:var(--fg);border-radius:6px;padding:5px 9px;font:500 12px var(--sans);cursor:pointer;flex:none}
+.blist button:hover{border-color:var(--amber);color:var(--amber)}
+.blist .empty{color:var(--muted);justify-content:flex-start}
+.pcard.kiosk{width:min(640px,calc(100% - 32px));top:calc(70px + env(safe-area-inset-top,0px));max-height:none}
+.ktabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.ktabs button{appearance:none;border:1px solid var(--line);background:var(--panel-2);color:var(--fg);border-radius:8px;padding:8px 6px;font:600 13px var(--sans);cursor:pointer;display:grid;gap:2px;min-height:44px}
+.ktabs button span{font:500 12px "IBM Plex Sans Arabic",var(--sans);color:var(--muted)}
+.ktabs button[aria-selected="true"]{background:var(--teal);border-color:var(--teal);color:var(--on-teal)}.ktabs button[aria-selected="true"] span{color:var(--on-teal)}
+.klist{list-style:none;margin:0;padding:0;display:grid;gap:8px;overflow:auto;flex:1;min-height:0;align-content:start}
+.klist li{display:flex;justify-content:space-between;gap:12px;padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--panel-2)}
+.kt{display:grid;gap:2px;min-width:0}.kt b{color:var(--fg)}.kt .ar{color:var(--muted);font-family:"IBM Plex Sans Arabic",var(--sans);text-align:left}
+.kt .km{font:500 12px var(--mono);color:var(--mint)}.kt .kd{color:var(--muted);font-size:13px}
+.kb{display:grid;gap:6px;justify-items:end;align-content:start;flex:none}.kb .pp{font-size:18px}.kb .btn{min-height:36px;padding:6px 14px;font-size:14px}
+@media (max-width:560px){.pcard.kiosk{top:calc(110px + env(safe-area-inset-top,0px))}.klist li{flex-direction:column}.kb{grid-auto-flow:column;justify-content:space-between;align-items:center}}
+
+</style>
+</head>
+<body>
+<canvas id="scene" aria-label="Virtual museum gift shop" tabindex="-1"></canvas>
+<div id="hud" class="hud" hidden><span class="dot"></span><span id="hudt">Saudi National Museum · Museum shop</span></div>
+<div id="basket" class="basket" hidden><span class="bt">Your basket</span><span class="bn" aria-live="polite">0 items</span><span class="bs">0 of 300 SAR</span><div class="bar"><i></i></div><button type="button" id="bview" class="bview" aria-expanded="false" aria-controls="blist">View basket</button><ul id="blist" class="blist" hidden></ul></div>
+<div id="toast" class="toast" role="status" hidden></div>
+<div id="fade" class="fade" aria-hidden="true"></div>
+<button id="payBtn" class="btn board" hidden>Leave without buying</button>
+<div id="pcard" class="pcard" role="dialog" aria-label="Product" hidden></div>
+<div id="pad" class="pad" hidden aria-label="Walking controls">
+  <button class="up" data-d="up" aria-label="Walk forward">▲</button>
+  <button class="left" data-d="left" aria-label="Turn left">◀</button>
+  <button class="down" data-d="down" aria-label="Walk back">▼</button>
+  <button class="right" data-d="right" aria-label="Turn right">▶</button>
+</div>
+<div id="ov" class="ov"><div id="card" class="card" tabindex="-1"></div></div>
+<button id="rbtn" class="rbtn" aria-expanded="false" aria-controls="rpanel">Researcher</button>
+<aside id="rpanel" class="rpanel" hidden aria-label="Researcher controls">
+  <header><h3>Researcher controls</h3><button id="rclose" class="x" aria-label="Close researcher controls">×</button></header>
+  <p class="note">Participants never see this panel. Preview conditions here, or assign one with a link ending in <code id="rcode">#story-front-oud-dim</code>.</p>
+  <fieldset><legend>Product information on handmade crafts</legend>
+    <div class="seg seg3" id="rinfo"><button type="button" data-v="plain">Price only</button><button type="button" data-v="label">Label</button><button type="button" data-v="story">Label and story</button></div></fieldset>
+  <fieldset><legend>Where the handmade crafts are</legend>
+    <div class="seg" id="rplace"><button type="button" data-v="front">Front tables</button><button type="button" data-v="back">Back counter</button></div></fieldset>
+  <fieldset><legend>Lighting</legend>
+    <div class="seg" id="rlight"><button type="button" data-v="bright">Bright, cool</button><button type="button" data-v="dim">Dim, warm</button></div>
+    <label for="rk">Colour temperature <output id="rko">5600 K</output></label><input type="range" id="rk" min="2700" max="6500" step="100">
+    <label for="rl">Brightness <output id="rlo">100%</output></label><input type="range" id="rl" min="20" max="120" step="1"></fieldset>
+  <fieldset><legend>Sound</legend>
+    <div class="seg seg3" id="rmusic"><button type="button" data-v="none">Default</button><button type="button" data-v="nature">Nature</button><button type="button" data-v="oud">Oud</button></div></fieldset>
+  <div class="ractions"><button id="rskip" class="btn ghost" type="button">Enter the shop now</button></div>
+</aside>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(() => {
+'use strict';
+/* The page's own seeded sequence for the scene (the 3D library never touches it), so every browser builds the same shop */
+const RND=(a=>()=>{ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; })(20261113);
+const rnd=()=>{ try{ return crypto.getRandomValues(new Uint32Array(1))[0]/4294967296; }catch(e){ return (Date.now()%997)/997; } };
+const $=s=>document.querySelector(s);
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const reduceMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const coarse=matchMedia('(pointer: coarse)').matches;
+/* ---------- Conditions ---------- */
+const INFO={ plain:'Price only', label:'"Handmade in Saudi Arabia" label', story:'Label and maker story' };
+const PLACE={ front:'Local crafts at the front', back:'Local crafts at the back' };
+const SOUNDS={ none:'Default shop sounds', nature:'Nature sounds', oud:'Najdi oud music' };
+const BUDGET=300;
+const LIGHTS={ bright:{k:5600,lvl:1.0,label:'Bright, cool'}, dim:{k:2900,lvl:.5,label:'Dim, warm'} };
+const S={ step:'welcome', info:'label', place:'front', sound:'none', light:'bright', k:5600, lvl:1, assignedBy:'random', prep:{volume:.6}, run:null, answers:null, inspecting:null };
+function assign(){
+  const h=decodeURIComponent(location.hash.slice(1)).toLowerCase();
+  const m=h.match(/^(plain|label|story)-(front|back)(?:-(none|nature|oud))?(?:-(bright|dim))?$/);
+  const a=Object.keys(INFO), b=Object.keys(PLACE), c=Object.keys(SOUNDS), d=Object.keys(LIGHTS);
+  if(m){ S.info=m[1]; S.place=m[2]; S.sound=m[3]||c[rnd()*c.length|0]; S.light=m[4]||d[rnd()*d.length|0]; S.assignedBy=(m[3]&&m[4])?'link':'link, rest random'; }
+  else { S.info=a[rnd()*a.length|0]; S.place=b[rnd()*b.length|0]; S.sound=c[rnd()*c.length|0]; S.light=d[rnd()*d.length|0]; S.assignedBy='random'; }
+  S.k=LIGHTS[S.light].k; S.lvl=LIGHTS[S.light].lvl;
+}
+assign();
+
+/* ---------- Three.js scene ---------- */
+const canvas=$('#scene');
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.6));
+renderer.toneMapping=THREE.ACESFilmicToneMapping; renderer.toneMappingExposure=1.05;
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0x1a1612);
+const camera=new THREE.PerspectiveCamera(66,1,0.05,120);
+camera.rotation.order='YXZ';
+const cam={x:-4,z:4.1,yaw:-.35,pitch:-0.12};
+const HP=Math.PI/2;
+function canvasTex(w,h,draw){ const c=document.createElement('canvas'); c.width=w; c.height=h; const g=c.getContext('2d'); draw(g,w,h);
+  const t=new THREE.CanvasTexture(c); t.anisotropy=4; t.userData={c,g,draw}; return t; }
+function redraw(t){ const {c,g,draw}=t.userData; g.clearRect(0,0,c.width,c.height); draw(g,c.width,c.height); t.needsUpdate=true; }
+function lam(color,extra){ return new THREE.MeshLambertMaterial(Object.assign({color},extra||{})); }
+function basic(color,extra){ return new THREE.MeshBasicMaterial(Object.assign({color},extra||{})); }
+function box(w,h,d,mat,x,y,z,parent){ const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat); m.position.set(x,y,z); (parent||scene).add(m); return m; }
+const SANS='"IBM Plex Sans", system-ui, sans-serif', AR='"IBM Plex Sans Arabic", "IBM Plex Sans", system-ui, sans-serif';
+
+/* ---------- The shop (metres) ----------
+   Room x -7..7, z -5..5, ceiling 3.6. The museum galleries are behind the north wall (z = 5): you come in through
+   the left doorway (x = -4); the right doorway (x = 4.2) leads out to the lobby, with the till beside it.
+   Front zone: two display tables on your way from the entrance to the till. Back zone: a long display counter along the back wall. */
+const RECTS=[];
+const solid=(x0,x1,z0,z1)=>RECTS.push([Math.min(x0,x1),Math.max(x0,x1),Math.min(z0,z1),Math.max(z0,z1)]);
+const inRect=(x,z,pad)=>RECTS.some(([x0,x1,z0,z1])=>x>x0-pad&&x<x1+pad&&z>z0-pad&&z<z1+pad);
+
+/* polished limestone floor */
+const floorTex=canvasTex(512,512,(g,w,h)=>{ g.fillStyle='#d9ccb4'; g.fillRect(0,0,w,h);
+  for(let i=0;i<7000;i++){ const v=190+RND()*50|0; g.fillStyle=`rgba(${v},${v-12},${v-30},${.18+RND()*.3})`; const s=1+RND()*2.5; g.fillRect(RND()*w,RND()*h,s,s); }
+  g.strokeStyle='rgba(120,100,70,.35)'; g.lineWidth=2; for(let x=0;x<=w;x+=128){ g.beginPath(); g.moveTo(x,0); g.lineTo(x,h); g.stroke(); g.beginPath(); g.moveTo(0,x); g.lineTo(w,x); g.stroke(); } });
+floorTex.wrapS=floorTex.wrapT=THREE.RepeatWrapping; floorTex.repeat.set(4,3);
+const floor=new THREE.Mesh(new THREE.PlaneGeometry(14,10),new THREE.MeshPhongMaterial({map:floorTex,shininess:40,specular:0x333333})); floor.rotation.x=-HP; scene.add(floor);
+/* walls: warm plaster with a Najdi triangle frieze */
+const wallTex=canvasTex(1024,512,(g,w,h)=>{ g.fillStyle='#e4d3b5'; g.fillRect(0,0,w,h);
+  for(let i=0;i<5000;i++){ g.fillStyle=`rgba(150,110,70,${RND()*.05})`; g.fillRect(RND()*w,RND()*h,3,3); }
+  g.fillStyle='#b98f62'; g.fillRect(0,40,w,10); g.fillRect(0,96,w,6);
+  g.fillStyle='#c9a379'; for(let x=0;x<w;x+=32){ g.beginPath(); g.moveTo(x,50); g.lineTo(x+16,90); g.lineTo(x+32,50); g.closePath(); g.fill(); }
+  g.fillStyle='#8a6a48'; for(let x=16;x<w;x+=64){ g.fillRect(x-3,58,6,6); } });
+wallTex.wrapS=THREE.RepeatWrapping;
+const wallM=lam(0xffffff,{map:wallTex});
+function wall(len,x,z,rotY){ const t=wallTex.clone(); t.needsUpdate=true; t.wrapS=THREE.RepeatWrapping; t.repeat.set(len/7,1);
+  const m=new THREE.Mesh(new THREE.PlaneGeometry(len,3.6),lam(0xffffff,{map:t})); m.position.set(x,1.8,z); m.rotation.y=rotY; scene.add(m); return m; }
+wall(10,-7,0,HP); wall(10,7,0,-HP); wall(14,0,-5,0);
+/* north wall with two doorways */
+[[-7,-5],[-3,3.2],[5.2,7]].forEach(([a,b])=>{ const m=wall(b-a,(a+b)/2,5,Math.PI); });
+[[-5,-3],[3.2,5.2]].forEach(([a,b])=>{ const m=new THREE.Mesh(new THREE.PlaneGeometry(b-a,1.2),wallM); m.position.set((a+b)/2,3.0,5); m.rotation.y=Math.PI; scene.add(m); });
+/* what you see through the doorways: the dim gallery on the left, the bright lobby on the right */
+box(2,2.4,.05,lam(0x2a2420),-4,1.2,5.6); box(2,2.4,.05,lam(0xb9c4c8),4.2,1.2,5.6);
+[-5,-3,3.2,5.2].forEach(x=>{ box(.12,2.45,.25,lam(0x6e5137),x,1.22,5); }); [-4,4.2].forEach(x=>box(2.1,.12,.25,lam(0x6e5137),x,2.42,5));
+/* ceiling with timber beams */
+const ceil=new THREE.Mesh(new THREE.PlaneGeometry(14,10),lam(0xefe6d6)); ceil.rotation.x=HP; ceil.position.y=3.6; scene.add(ceil);
+for(let x=-6;x<=6;x+=1.5) box(.16,.14,10,lam(0x7a5636),x,3.53,0);
+/* skirting */
+box(14,.12,.04,lam(0x6e5137),0,.06,-4.97); box(.04,.12,10,lam(0x6e5137),-6.97,.06,0); box(.04,.12,10,lam(0x6e5137),6.97,.06,0);
+solid(-7.5,-6.95,-5.5,5.5); solid(6.95,7.5,-5.5,5.5); solid(-7.5,7.5,-5.5,-4.95); solid(-7.5,7.5,4.95,5.5);
+
+/* ---------- Furniture ---------- */
+const woodM=lam(0x8a6040), woodLight=lam(0xb98c5e), topM=lam(0xe9dfcd), glassM=lam(0xbcd3d9,{transparent:true,opacity:.18});
+/* two front display tables */
+const TABLES=[[-1.6,1.8],[1.6,1.8]];
+TABLES.forEach(([x,z])=>{ box(2.2,.06,1.0,woodLight,x,.8,z); box(2.0,.74,.8,woodM,x,.4,z); box(2.1,.03,.9,topM,x,.845,z); solid(x-1.1,x+1.1,z-.5,z+.5); });
+/* the long display counter along the back wall, with a tall backboard and an upper shelf of books */
+box(11.4,.9,.7,woodM,0,.45,-4.45); box(11.5,.05,.78,topM,0,.92,-4.45); solid(-5.75,5.75,-4.85,-4.08);
+box(11.4,1.5,.06,woodLight,0,1.7,-4.93); box(11.4,.05,.3,woodM,0,2.05,-4.78);
+for(let i=0;i<46;i++){ const x=-5.5+i*.24, hgt=.18+RND()*.1, c=[0x31506e,0x7c3b2e,0x2f5a50,0xc4a05a,0x4b3b62,0x806040][i%6]; box(.05+RND()*.04,hgt,.18,lam(c),x,2.08+hgt/2,-4.78); }
+/* open bookcases against the side walls: back panel, sides, top, four shelves of books facing into the shop */
+const BOOK_COLS=[0x31506e,0x7c3b2e,0x2f5a50,0xc4a05a,0x4b3b62,0xd9cdb5,0x8a5a32,0x1f4e79];
+[-1,1].forEach(s=>{ const cx=s*6.72, z0=-2.9, z1=1.7, zc=(z0+z1)/2, len=z1-z0;
+  box(.04,2.3,len,woodM,s*6.93,1.15,zc); box(.44,.06,len,woodM,cx,2.3,zc); box(.44,.12,len,woodM,cx,.06,zc);
+  [z0,z1].forEach(z=>box(.44,2.3,.05,woodM,cx,1.15,z));
+  [.12,.66,1.2,1.74].forEach(y=>{ box(.4,.03,len-.05,woodLight,cx,y,zc);
+    for(let z=z0+.08;z<z1-.08;){ if(RND()<.06){ z+=.18; continue; }
+      const th=.035+RND()*.04, hgt=.22+RND()*.14, dp=.15+RND()*.06, col=BOOK_COLS[(RND()*BOOK_COLS.length)|0];
+      if(RND()<.07){ /* a short pile lying flat */ for(let k=0;k<3;k++) box(.2,.035,.15,lam(BOOK_COLS[(k*3+(z*10|0))%8]),cx-s*.04,y+.033+k*.036,z+.08); z+=.2; continue; }
+      const b=box(dp,hgt,th,lam(col),cx+s*(.2-dp/2)-s*.02,y+.015+hgt/2,z+th/2); if(RND()<.12) b.rotation.x=(RND()<.5?-1:1)*.12; z+=th+.004; } });
+  solid(Math.min(s*6.48,s*7),Math.max(s*6.48,s*7),z0-.05,z1+.05); });
+/* centre plinth: a museum replica under glass, not for sale */
+box(1.0,1.0,1.0,lam(0xd6c7ad),0,.5,-1.2); box(.9,.8,.9,glassM,0,1.4,-1.2); solid(-.55,.55,-1.75,-.65);
+const steleTex=canvasTex(128,256,(g,w,h)=>{ g.fillStyle='#9c8e78'; g.fillRect(0,0,w,h); g.strokeStyle='rgba(60,50,40,.6)'; g.lineWidth=3;
+  for(let y=26;y<h-14;y+=24) for(let x=14;x<w-14;x+=17){ g.beginPath(); const k=(x*7+y*3)%4;
+    if(k===0){ g.moveTo(x,y-8); g.lineTo(x,y+8); } else if(k===1){ g.arc(x,y,6,0,7); } else if(k===2){ g.moveTo(x-6,y+8); g.lineTo(x,y-8); g.lineTo(x+6,y+8); } else { g.moveTo(x-6,y-6); g.lineTo(x+6,y+6); g.moveTo(x+6,y-6); g.lineTo(x-6,y+6); } g.stroke(); } });
+const stele=new THREE.Mesh(new THREE.BoxGeometry(.32,.62,.09),lam(0xffffff,{map:steleTex})); stele.position.set(0,1.33,-1.2); scene.add(stele);
+/* the till by the exit */
+box(1.6,1.0,.7,woodM,5.2,.5,3.0); box(1.7,.05,.8,topM,5.2,1.02,3.0); box(.35,.25,.25,lam(0x202326),5.75,1.17,3.05); box(.3,.2,.02,basic(0x6fb7c9),5.75,1.32,2.92);
+solid(4.35,6.05,2.6,3.4);
+/* two more display tables in the middle of the shop, and a low counter along the wall between the two doorways */
+[[-3.6,-1.2],[3.6,-1.2]].forEach(([x,z])=>{ box(2.2,.06,1.0,woodLight,x,.8,z); box(2.0,.74,.8,woodM,x,.4,z); box(2.1,.03,.9,topM,x,.845,z); solid(x-1.1,x+1.1,z-.5,z+.5); });
+box(5.6,.9,.6,woodM,.1,.45,4.64); box(5.7,.05,.68,topM,.1,.92,4.62); solid(-2.75,2.95,4.28,4.95);
+
+/* ---------- Signs ---------- */
+function signTex(rows,w=1024,h=256,bg='#2b2118'){ return canvasTex(w,h,(g,W,H)=>{ g.fillStyle=bg; g.fillRect(0,0,W,H); g.textBaseline='middle';
+  rows.forEach(r=>{ g.fillStyle=r.c||'#f3e7d1'; g.font=`${r.wt||600} ${r.s}px ${r.ar?AR:SANS}`; g.textAlign=r.al||'left'; g.fillText(r.t,r.x,r.y); }); }); }
+const SIGN_TEX=[];
+function sign(tex,w,h,x,y,z,rotY){ const m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),basic(0xffffff,{map:tex})); m.position.set(x,y,z); m.rotation.y=rotY||0; scene.add(m); SIGN_TEX.push(tex); return m; }
+sign(signTex([{t:'Museum Shop',x:512,y:92,s:92,al:'center'},{t:'متجر المتحف',x:512,y:190,s:80,ar:1,al:'center',c:'#e3c48f'}]),2.6,.65,0,2.9,4.96,Math.PI);
+sign(signTex([{t:'Exit · Lobby',x:512,y:128,s:96,al:'center',c:'#ffffff'}],1024,256,'#1f6b4a'),1.2,.3,4.2,2.75,4.94,Math.PI);
+sign(signTex([{t:'Pay here',x:40,y:128,s:90},{t:'الدفع هنا',x:984,y:128,s:84,ar:1,al:'right',c:'#e3c48f'}]),1.1,.27,6.1,2.3,4.94,Math.PI);
+sign(signTex([{t:'Books',x:40,y:128,s:96},{t:'كتب',x:984,y:128,s:90,ar:1,al:'right',c:'#e3c48f'}]),.9,.22,-6.35,2.45,-.6,HP);
+sign(signTex([{t:'Replica · not for sale',x:512,y:128,s:72,al:'center'}],1024,256,'#efe6d6'),.5,.12,0,1.03,-0.69,0).material.color.setHex(0x3a2e22);
+
+/* ---------- Lights ---------- */
+const hemi=new THREE.HemisphereLight(0xfff1dc,0x6b5a45,.75); scene.add(hemi);
+const spots=[];
+[[-1.6,1.8],[1.6,1.8],[-3.8,-3.6],[0,-3.6],[3.8,-3.6],[-3.6,-1.2],[3.6,-1.2],[0,4.2],[5.2,3]].forEach(([x,z])=>{ const p=new THREE.PointLight(0xffe2b8,.9,7,1.6); p.position.set(x,3.2,z); scene.add(p); spots.push(p);
+  box(.14,.12,.14,lam(0x1f1f1f),x,3.45,z); });
+function kelvinColor(k){
+  const t=k/100; let r,g,b;
+  if(t<=66){ r=255; g=99.4708025861*Math.log(t)-161.1195681661; b=t<=19?0:138.5177312231*Math.log(t-10)-305.0447927307; }
+  else { r=329.698727446*Math.pow(t-60,-0.1332047592); g=288.1221695283*Math.pow(t-60,-0.0755148492); b=255; }
+  return new THREE.Color(clamp(r,0,255)/255, clamp(g,0,255)/255, clamp(b,0,255)/255);
+}
+function applyLighting(){ const c=kelvinColor(S.k), l=S.lvl;
+  hemi.color.copy(c); hemi.groundColor.copy(c).multiplyScalar(.4); hemi.intensity=.22+.58*l;
+  spots.forEach(p=>{ p.color.copy(c); p.intensity=.25+.75*l; }); renderer.toneMappingExposure=.68+.42*l; }
+applyLighting();
+function resize(){ const w=innerWidth,h=innerHeight; renderer.setSize(w,h,false); camera.aspect=w/h; camera.updateProjectionMatrix(); }
+addEventListener('resize',resize); resize();
+
+/* ---------- People: Saudi visitors, stylised and without faces ---------- */
+const SKIN=[lam(0xc69774),lam(0xb07f5c),lam(0xd5a985)];
+const PM={ dark:lam(0x121214), case:lam(0x3a3c40), caseRib:lam(0x2a2c2f), phone:lam(0x0e0e10), bag:lam(0x1d1d20),
+  beard:lam(0x1e1712), white:lam(0xf7f5f0), pupil:lam(0x1a120e), lip:lam(0x8c3f38), sandal:lam(0x6a4a33) };
+const hexCss=h=>'#'+h.toString(16).padStart(6,'0');
+const shemaghTex=canvasTex(128,128,(g,w,h)=>{
+  g.fillStyle='#f1ede6'; g.fillRect(0,0,w,h); g.fillStyle='#b5303a';
+  for(let i=0;i<w;i+=16){ g.fillRect(i,0,7,h); g.fillRect(0,i,w,7); }
+  g.fillStyle='#f1ede6'; for(let i=0;i<w;i+=16) for(let j=0;j<h;j+=16) g.fillRect(i+2,j+2,3,3);
+});
+shemaghTex.wrapS=shemaghTex.wrapT=THREE.RepeatWrapping; shemaghTex.repeat.set(2,2);
+const shemaghM=lam(0xffffff,{map:shemaghTex, side:THREE.DoubleSide}), ghutraM=lam(0xf4f2ee,{side:THREE.DoubleSide});
+/* Fabric textures: front of a lathe sits at u = 0 and u = 1, the hem at the canvas bottom */
+const ROBE_CACHE={};
+const PHONE_GLOW=new THREE.MeshBasicMaterial({color:0xa9d4ff});
+function robeTex(base,kind){ const key=base+'|'+kind; if(ROBE_CACHE[key]) return ROBE_CACHE[key]; return ROBE_CACHE[key]=canvasTex(256,512,(g,w,h)=>{
+  g.fillStyle=hexCss(base); g.fillRect(0,0,w,h);
+  for(let i=0;i<2200;i++){ g.fillStyle=RND()<.5?'rgba(255,255,255,.04)':'rgba(0,0,0,.04)'; g.fillRect(RND()*w,RND()*h,2,7); }
+  if(kind==='thobe'){ g.fillStyle='rgba(0,0,0,.16)'; g.fillRect(0,0,3,150); g.fillRect(w-3,0,3,150);
+    g.fillStyle='rgba(255,255,255,.6)'; for(let y=30;y<140;y+=28){ g.beginPath(); g.arc(7,y,3,0,7); g.fill(); }
+    g.fillStyle='rgba(0,0,0,.14)'; g.fillRect(30,92,34,2); g.fillRect(30,92,2,30); g.fillRect(62,92,2,30); }
+  if(kind==='gold'){ const band=x=>{ g.fillStyle='#c9a24a'; g.fillRect(x,0,16,h); g.fillStyle=hexCss(base);
+      for(let y=8;y<h;y+=22){ g.beginPath(); g.moveTo(x+8,y); g.lineTo(x+13,y+7); g.lineTo(x+8,y+14); g.lineTo(x+3,y+7); g.closePath(); g.fill(); } };
+    band(0); band(w-16); g.fillStyle='#c9a24a'; g.fillRect(0,h-28,w,10); g.fillRect(0,h-13,w,3);
+    for(let i=0;i<46;i++){ g.fillStyle='rgba(201,162,74,.6)'; g.beginPath(); g.arc(24+RND()*(w-48),190+RND()*(h-250),3,0,7); g.fill(); } }
+  if(kind==='dots'){ g.fillStyle='rgba(255,255,255,.6)'; for(let y=6;y<h;y+=18) for(let x=(y/18%2)*9;x<w;x+=18){ g.beginPath(); g.arc(x,y,2.6,0,7); g.fill(); }
+    g.fillStyle='rgba(255,255,255,.75)'; g.fillRect(0,h-22,w,5); }
+  if(kind==='stripes'){ g.fillStyle='rgba(255,255,255,.92)'; for(let y=0;y<h;y+=44) g.fillRect(0,y,w,20); }
+});}
+/* Lathe with evenly spaced rings so fabric patterns map by height */
+const lathe=(pts,n=26)=>{
+  const y0=pts[0][1], y1=pts[pts.length-1][1], out=[new THREE.Vector2(0,y0)];
+  for(let i=0;i<=n;i++){ const y=y0+(y1-y0)*i/n; let k=0; while(k<pts.length-2 && pts[k+1][1]<y) k++;
+    const [ra,ya]=pts[k], [rb,yb]=pts[k+1]; out.push(new THREE.Vector2(ra+(rb-ra)*((y-ya)/((yb-ya)||1)),y)); }
+  out.push(new THREE.Vector2(0,y1)); const g=new THREE.LatheGeometry(out,28); g.scale(1,1,.72); return g; };
+const robeGeo=(flare,h)=>lathe([[flare,.02],[flare-.02,.25],[.215,.75],[.205,1.0],[.225,h-.15],[.2,h-.06],[.09,h]]);
+const GEO={
+  thobe:robeGeo(.25,1.46), abaya:robeGeo(.31,1.42),
+  seat:lathe([[.23,.02],[.22,.3],[.225,.6],[.2,.69],[.09,.75]]),
+  dress:lathe([[.21,.42],[.18,.55],[.13,.72],[.14,.84],[.12,.89],[.05,.93]]),
+  shirt:lathe([[.15,.46],[.14,.55],[.13,.75],[.14,.84],[.12,.89],[.05,.93]]),
+  kThobe:lathe([[.17,.02],[.16,.3],[.13,.72],[.14,.84],[.12,.89],[.05,.93]]),
+  shorts:new THREE.CylinderGeometry(.14,.15,.18,16),
+  head:new THREE.SphereGeometry(.1,20,16), kHead:new THREE.SphereGeometry(.1,20,16), kHair:new THREE.SphereGeometry(.105,20,14),
+  tail:new THREE.SphereGeometry(.04,12,10),
+  cap:new THREE.SphereGeometry(.118,18,6,0,Math.PI*2,0,Math.PI*.3),
+  capSide:new THREE.SphereGeometry(.118,18,8,Math.PI/2+.8,Math.PI*2-1.6,Math.PI*.3,Math.PI*.25),
+  drape:new THREE.CylinderGeometry(.125,.23,.34,18,1,true,.95,Math.PI*2-1.9),
+  tailCloth:new THREE.BoxGeometry(.07,.38,.015),
+  agal:new THREE.TorusGeometry(.1,.013,6,24), wrap:new THREE.SphereGeometry(.122,18,14),
+  beard:new THREE.SphereGeometry(.101,18,8,Math.PI/2-1.15,2.3,Math.PI*.56,Math.PI*.4),
+  face:new THREE.CircleGeometry(.056,20), cape:new THREE.CylinderGeometry(.11,.27,.34,20), khimar:new THREE.CylinderGeometry(.11,.3,.5,20),
+  eye:new THREE.SphereGeometry(.02,12,10), mouth:new THREE.TorusGeometry(.024,.005,6,14,Math.PI),
+  neck:new THREE.CylinderGeometry(.045,.05,.12,10),
+  upper:new THREE.CylinderGeometry(.056,.05,.3,10), fore:new THREE.CylinderGeometry(.05,.044,.27,10),
+  kUpper:new THREE.CylinderGeometry(.04,.036,.2,10), kFore:new THREE.CylinderGeometry(.035,.032,.18,10), kLeg:new THREE.CylinderGeometry(.04,.035,.45,10),
+  hand:new THREE.SphereGeometry(.037,10,8), kHand:new THREE.SphereGeometry(.03,10,8),
+  phone:new THREE.BoxGeometry(.075,.15,.012), phoneScreen:new THREE.PlaneGeometry(.066,.136), shoe:new THREE.BoxGeometry(.09,.05,.22), kShoe:new THREE.BoxGeometry(.07,.04,.15)
+};
+GEO.upper.translate(0,-.15,0); GEO.fore.translate(0,-.135,0); GEO.kUpper.translate(0,-.1,0); GEO.kFore.translate(0,-.09,0);
+const POSES={ rest:[0,.07,0], chest:[-.28,-.14,-1.45], ear:[-1.57,.25,-2.21], case:[0,.22,0], bag:[0,.12,0], lap:[-.2,.05,-1.1],
+  hold:[0,.3,0], kidHold:[0,1.15,0], kidRest:[0,.12,0] };
+function arm(par,s,mat,skin,pose,kid,foreMat){
+  const sh=new THREE.Group(); sh.position.set(s*(kid?.13:.235),kid?.86:1.36,0); par.add(sh);
+  sh.add(new THREE.Mesh(kid?GEO.kUpper:GEO.upper,mat));
+  const el=new THREE.Group(); el.position.y=kid?-.2:-.3; sh.add(el);
+  el.add(new THREE.Mesh(kid?GEO.kFore:GEO.fore,foreMat||mat));
+  const hd=new THREE.Mesh(kid?GEO.kHand:GEO.hand,skin); hd.position.y=kid?-.19:-.28; el.add(hd);
+  const p=POSES[pose]; sh.rotation.set(p[0],0,s*p[1]); el.rotation.x=p[2]; return hd;
+}
+/* Eyes, brows, nose and smile, placed on a head group */
+function features(hg,mode,skin,beard){
+  return; /* faces switched off: figures stay featureless */
+  const W=mode==='woman'?{ex:.024,ey:.012,ez:.122,er:.014,bz:.125,ny:-.01,nz:.124,my:-.03,mz:.124,mr:.017}
+    :mode==='kid'?{ex:.037,ey:.008,ez:.087,er:.023,bz:.093,ny:-.018,nz:.1,my:-.045,mz:.09,mr:.024}
+    :{ex:.035,ey:.018,ez:.084,er:.017,bz:.089,ny:-.006,nz:.097,my:-.032,mz:beard?.104:.091,mr:.024};
+  [-1,1].forEach(s=>{
+    const e=new THREE.Mesh(GEO.eye,PM.white); e.scale.set(W.er/.02,W.er/.02*1.1,W.er/.02*.6); e.position.set(s*W.ex,W.ey,W.ez); hg.add(e);
+    const p=new THREE.Mesh(GEO.eye,PM.pupil); p.scale.setScalar(W.er/.02*.55); p.position.set(s*W.ex,W.ey-.002,W.ez+W.er*.4); hg.add(p);
+    const b=box(W.er*2.1,.007,.008,PM.beard,s*W.ex,W.ey+W.er+.013,W.bz,hg); b.rotation.z=-s*.14;
+  });
+  const n=new THREE.Mesh(GEO.eye,skin); n.scale.setScalar(mode==='woman'?.55:.75); n.position.set(0,W.ny,W.nz); hg.add(n);
+  const m=new THREE.Mesh(GEO.mouth,mode==='woman'?PM.lip:lam(0x6e2f2a)); m.scale.setScalar(W.mr/.024); m.rotation.z=Math.PI; m.position.set(0,W.my,W.mz); hg.add(m);
+}
+function suitcase(par,x,z){
+  const c=new THREE.Group(); box(.36,.52,.22,PM.case,0,.32,0,c);
+  [.2,.32,.44].forEach(y=>box(.365,.015,.225,PM.caseRib,0,y,0,c));
+  [-.1,.1].forEach(dx=>{ box(.016,.23,.016,PM.caseRib,dx,.69,-.07,c); box(.05,.05,.05,PM.dark,dx*1.4,.035,.08,c); box(.05,.05,.05,PM.dark,dx*1.4,.035,-.08,c); });
+  box(.22,.025,.03,PM.dark,0,.81,-.07,c);
+  c.position.set(x,0,z); par.add(c);
+}
+function person(o){
+  const g=new THREE.Group(), male=o.sex==='m', H=male?1.46:1.42, skin=SKIN[o.skin||0];
+  const robeM=lam(0xffffff,{map:robeTex(o.robe,male?'thobe':(o.trim?'gold':'plain'))}), sleeveM=lam(o.robe);
+  const up=new THREE.Group(); g.add(up);
+  const shoeM=o.sandal?PM.sandal:PM.dark;
+  if(o.seated){
+    const r=new THREE.Mesh(GEO.seat,robeM); r.position.y=.45; g.add(r);
+    box(.4,.16,.42,sleeveM,0,.52,.2,g); box(.38,.47,.16,sleeveM,0,.24,.42,g);
+    [-.08,.08].forEach(x=>{ const s=new THREE.Mesh(GEO.shoe,shoeM); s.position.set(x,.025,.52); g.add(s); });
+    up.position.y=.45+.75-H;
+  } else {
+    g.add(new THREE.Mesh(male?GEO.thobe:GEO.abaya,robeM));
+    [-.08,.08].forEach(x=>{ const s=new THREE.Mesh(GEO.shoe,shoeM); s.position.set(x,.025,.06); g.add(s); });
+  }
+  const neck=new THREE.Mesh(GEO.neck,skin); neck.position.y=H+.03; up.add(neck);
+  const hg=new THREE.Group(); hg.position.y=H+.15; up.add(hg);
+  if(male){
+    const cloth=o.ghutra?ghutraM:shemaghM;
+    const hd=new THREE.Mesh(GEO.head,skin); hd.scale.set(.92,1.08,.98); hg.add(hd);
+    if(o.beard){ const bd=new THREE.Mesh(GEO.beard,PM.beard); bd.scale.set(.93,1.08,.99); hg.add(bd); }
+    features(hg,'man',skin,o.beard);
+    if(o.bareHead){ const hr=new THREE.Mesh(GEO.kHair,lam(0x241a14)); hr.scale.set(.95,.9,.98); hr.position.set(0,.025,-.012); hg.add(hr); }
+    else {
+    const cap=new THREE.Mesh(GEO.cap,cloth); cap.position.y=.01; hg.add(cap); const cs=new THREE.Mesh(GEO.capSide,cloth); cs.position.y=.01; hg.add(cs);
+    const ag=new THREE.Mesh(GEO.agal,PM.dark); ag.rotation.x=Math.PI/2; ag.position.y=.075; hg.add(ag);
+    const dr=new THREE.Mesh(GEO.drape,cloth); dr.position.y=-.16; hg.add(dr); }
+    if(o.tails) [-1,1].forEach(s=>{ const t=new THREE.Mesh(GEO.tailCloth,cloth); t.position.set(s*.115,-.33,.165); t.rotation.x=-.12; hg.add(t); });
+    if(o.glasses){ box(.16,.03,.02,PM.dark,0,.018,.1,hg); }
+  } else {
+    const sc=o.trim&&!o.scarf?lam(o.robe):lam(o.scarf||0x141416);
+    const w=new THREE.Mesh(GEO.wrap,sc); w.scale.set(1,1.1,1); hg.add(w);
+    if(o.niqab){ box(.085,.02,.012,skin,0,.03,.118,hg); }
+    else { const f=new THREE.Mesh(GEO.face,skin); f.scale.set(1,1.28,1); f.position.set(0,-.005,.121); hg.add(f); features(hg,'woman',skin); }
+    const cape=new THREE.Mesh(o.niqab?GEO.khimar:GEO.cape,sc); cape.position.y=o.niqab?-.26:-.2; hg.add(cape);
+  }
+  const pose=o.seated?['lap','lap']:(o.pose||['rest','rest']);
+  const rh=arm(up,-1,sleeveM,skin,pose[0]), lh=arm(up,1,sleeveM,skin,pose[1]);
+  if(o.phone){ const p=new THREE.Mesh(GEO.phone,PM.phone); p.position.set(0,-.02,.03); rh.add(p); }
+  if(o.prop==='case' && !o.seated) suitcase(g,.37,.07);
+  if(o.prop==='bag') box(.22,.28,.09,PM.bag,0,-.17,0,lh);
+  if(o.prop==='shoulder'){ box(.2,.17,.08,PM.bag,-.27,.98,.02,up); const st=box(.02,.62,.02,PM.bag,-.05,1.25,.17,up); st.rotation.z=-.55; }
+  if(o.kidScale){ g.scale.setScalar(o.kidScale); }
+  g.position.set(o.x,o.kidScale?.45*(1-o.kidScale)+.02:0,o.z||0); g.rotation.y=o.rot||0; (o.parent||scene).add(g); return g;
+}
+function child(o){
+  const g=new THREE.Group(), skin=SKIN[o.skin||0], hairM=lam(o.hair||0x2a1d16);
+  const legs=h=>[-.055,.055].forEach(x=>{ const l=new THREE.Mesh(GEO.kLeg,skin); l.scale.y=h/.45; l.position.set(x,h/2,0); g.add(l);
+    const s=new THREE.Mesh(GEO.kShoe,o.kind==='boy'?PM.sandal:PM.sandal); s.position.set(x,.02,.04); g.add(s); });
+  let topM, armM=lam(o.color), foreM=null;
+  if(o.kind==='girl'){ legs(.46); topM=lam(0xffffff,{map:robeTex(o.color,'dots')}); g.add(new THREE.Mesh(GEO.dress,topM)); foreM=skin; }
+  else if(o.kind==='thobe'){ topM=lam(0xffffff,{map:robeTex(o.color,'thobe')}); g.add(new THREE.Mesh(GEO.kThobe,topM));
+    [-.055,.055].forEach(x=>{ const s=new THREE.Mesh(GEO.kShoe,PM.sandal); s.position.set(x,.02,.05); g.add(s); }); }
+  else { legs(.34); const sh=new THREE.Mesh(GEO.shorts,lam(o.shorts||0x6e5038)); sh.position.y=.41; g.add(sh);
+    topM=lam(0xffffff,{map:robeTex(o.color,'stripes')}); g.add(new THREE.Mesh(GEO.shirt,topM)); foreM=skin; }
+  const neck=new THREE.Mesh(GEO.neck,skin); neck.scale.setScalar(.8); neck.position.y=.95; g.add(neck);
+  const hg=new THREE.Group(); hg.position.y=1.05; g.add(hg);
+  hg.add(new THREE.Mesh(GEO.kHead,skin));
+  const hb=new THREE.Mesh(GEO.kHair,hairM); hb.position.set(0,.022,-.016); hg.add(hb);
+  if(o.kind==='girl') [-1,1].forEach(s=>{ const t=new THREE.Mesh(GEO.tail,hairM); t.position.set(s*.11,-.01,-.03); hg.add(t); });
+  box(.13,.03,.05,hairM,0,.082,.055,hg);
+  features(hg,'kid',skin);
+  const pose=o.pose||['kidRest','kidRest'];
+  arm(g,-1,armM,skin,pose[0],true,foreM); arm(g,1,armM,skin,pose[1],true,foreM);
+  g.position.set(o.x,0,o.z||0); g.rotation.y=o.rot||0; (o.parent||scene).add(g); return g;
+}
+function family(list,x,z,rot){ const grp=new THREE.Group(); list.forEach(m=>(m.kid?child:person)(Object.assign({},m,{parent:grp}))); grp.position.set(x,0,z); grp.rotation.y=rot||0; scene.add(grp); return grp; }
+const T={W:0xeceae4,BEI:0xd6c2a6,GRY:0xb8bbbf,BLU:0xa7b3c6,NAV:0x2b3550,BLK:0x1b1b1f,TAU:0x9a8774};
+const pickR=arr=>arr[RND()*arr.length|0];
+const MEN=[{robe:T.W},{robe:T.W,ghutra:1},{robe:T.W,tails:1},{robe:T.BEI},{robe:T.GRY},{robe:T.BLU},{robe:T.NAV},{robe:T.BLK},{robe:T.TAU},{robe:T.W,glasses:1}];
+const WOMEN=[{robe:0x141416},{robe:0x141416,niqab:1},{robe:0x22304a,scarf:0x141416,niqab:1},{robe:0x3a3a3f,scarf:0x141416},{robe:0x3f5b6c,scarf:0x141416},{robe:0xd9ccb3,scarf:0xd6a294},{robe:0x6b5242,scarf:0x6b5242},{robe:0x2c3e5c,scarf:0x3d5578,trim:1}];
+function passenger(extra){ const male=RND()<.62, base=pickR(male?MEN:WOMEN);
+  return Object.assign({sex:male?'m':'f',skin:RND()*3|0,beard:male&&RND()<.6?1:0},base,extra); }
+/* ---------- Products ----------
+   Six handmade crafts by Saudi artisans and six factory-made souvenirs. Each product sits on one display slot.
+   Front slots are on the two tables you pass on the way to the till; back slots are on the counter along the back wall. */
+const L2=pts=>pts.map(([r,y])=>new THREE.Vector2(r,y));
+const phong=(c,sh)=>new THREE.MeshPhongMaterial({color:c,shininess:sh||60,specular:0x555555});
+function patTex(w,h,draw){ return canvasTex(w,h,draw); }
+const MAKE={
+  dallah(){ const g=new THREE.Group(), m=new THREE.MeshPhongMaterial({color:0xc9a24a,shininess:95,specular:0x997744});
+    g.add(new THREE.Mesh(new THREE.LatheGeometry(L2([[0,0],[.075,0],[.085,.03],[.07,.1],[.045,.15],[.04,.17],[.055,.2],[.05,.24],[.035,.26],[.045,.28],[.02,.31],[0,.32]]),24),m));
+    const sp=new THREE.Mesh(new THREE.CylinderGeometry(.007,.017,.17,8),m); sp.position.set(.1,.19,0); sp.rotation.z=-.85; g.add(sp);
+    const hd=new THREE.Mesh(new THREE.TorusGeometry(.055,.008,6,16,Math.PI),m); hd.position.set(-.06,.17,0); hd.rotation.z=HP; g.add(hd); return g; },
+  sadu(){ const t=patTex(256,256,(g,w,h)=>{ g.fillStyle='#8c2a24'; g.fillRect(0,0,w,h);
+      const band=(y,hh,c1,c2)=>{ g.fillStyle=c1; g.fillRect(0,y,w,hh); g.fillStyle=c2; for(let x=0;x<w;x+=hh){ g.beginPath(); g.moveTo(x,y+hh); g.lineTo(x+hh/2,y); g.lineTo(x+hh,y+hh); g.closePath(); g.fill(); } };
+      band(20,28,'#1c1714','#efe6d6'); band(70,18,'#efe6d6','#1c1714'); band(110,36,'#1c1714','#d4a34a'); band(168,18,'#efe6d6','#8c2a24'); band(208,28,'#1c1714','#efe6d6'); });
+    const g=new THREE.Group(), c=new THREE.Mesh(new THREE.BoxGeometry(.34,.34,.1),lam(0xffffff,{map:t})); c.position.y=.17; c.rotation.x=-.15; g.add(c); return g; },
+  mabkhara(){ const t=patTex(128,64,(g,w,h)=>{ const cs=['#2f8f5b','#f2c230','#c0392b','#2c6fb5','#f39c3d']; for(let i=0;i<8;i++){ g.fillStyle=cs[i%5]; g.fillRect(i*16,0,16,h); }
+      g.fillStyle='#1c1714'; for(let x=0;x<w;x+=16){ g.beginPath(); g.moveTo(x,h); g.lineTo(x+8,h/2); g.lineTo(x+16,h); g.closePath(); g.fill(); } });
+    const g=new THREE.Group(), pm=lam(0xffffff,{map:t});
+    const b=new THREE.Mesh(new THREE.BoxGeometry(.11,.07,.11),pm); b.position.y=.035; g.add(b);
+    const c=new THREE.Mesh(new THREE.BoxGeometry(.07,.06,.07),pm); c.position.y=.1; g.add(c);
+    const bw=new THREE.Mesh(new THREE.CylinderGeometry(.065,.045,.05,16),phong(0xc9a24a,90)); bw.position.y=.155; g.add(bw); return g; },
+  basket(){ const t=patTex(128,128,(g,w,h)=>{ g.fillStyle='#c8a46a'; g.fillRect(0,0,w,h); g.strokeStyle='#8a6a3c'; g.lineWidth=3;
+      for(let i=-h;i<w;i+=10){ g.beginPath(); g.moveTo(i,0); g.lineTo(i+h,h); g.stroke(); } g.fillStyle='#7a2e2a'; g.fillRect(0,50,w,10); g.fillStyle='#2f5a50'; g.fillRect(0,70,w,6); });
+    t.wrapS=THREE.RepeatWrapping; t.repeat.x=3;
+    const g=new THREE.Group(), m=lam(0xffffff,{map:t,side:THREE.DoubleSide});
+    g.add(new THREE.Mesh(new THREE.LatheGeometry(L2([[0,0],[.08,0],[.1,.03],[.11,.12],[.112,.14]]),20),m));
+    const rim=new THREE.Mesh(new THREE.TorusGeometry(.112,.008,6,20),lam(0x8a6a3c)); rim.rotation.x=HP; rim.position.y=.14; g.add(rim); return g; },
+  plate(){ const t=patTex(256,256,(g,w,h)=>{ g.fillStyle='#f4efe4'; g.fillRect(0,0,w,h); g.translate(w/2,h/2);
+      ['#1f4e79','#c48a2c','#1f4e79'].forEach((c,i)=>{ g.strokeStyle=c; g.lineWidth=8; g.beginPath(); g.arc(0,0,110-i*30,0,7); g.stroke(); });
+      g.fillStyle='#1f4e79'; for(let k=0;k<12;k++){ g.save(); g.rotate(k*Math.PI/6); g.beginPath(); g.moveTo(0,-40); g.lineTo(10,-62); g.lineTo(-10,-62); g.closePath(); g.fill(); g.restore(); }
+      g.fillStyle='#c48a2c'; g.beginPath(); g.arc(0,0,18,0,7); g.fill(); });
+    const g=new THREE.Group(), d=new THREE.Mesh(new THREE.CylinderGeometry(.12,.12,.014,32),[lam(0xf4efe4),lam(0xffffff,{map:t}),lam(0xf4efe4)]);
+    d.rotation.x=HP-.35; d.position.set(0,.125,0); g.add(d); box(.08,.03,.06,lam(0x5a4030),0,.015,-.03,g); return g; },
+  door(){ const t=patTex(128,208,(g,w,h)=>{ g.fillStyle='#8a5a32'; g.fillRect(0,0,w,h); g.fillStyle='#6b4224'; g.fillRect(w/2-2,0,4,h);
+      const cs=['#e8d9b5','#c0392b','#2c6fb5','#f2c230'];
+      for(let r=0;r<5;r++) for(let x=8;x<w-8;x+=20){ g.fillStyle=cs[(r+x/20|0)%4]; g.beginPath(); g.moveTo(x,24+r*36); g.lineTo(x+10,8+r*36); g.lineTo(x+20,24+r*36); g.closePath(); g.fill(); }
+      g.fillStyle='#d4a34a'; [[30,104],[98,104]].forEach(([x,y])=>{ g.beginPath(); g.arc(x,y,5,0,7); g.fill(); }); });
+    const g=new THREE.Group(), d=box(.15,.25,.03,lam(0xffffff,{map:t}),0,.135,0,g); d.rotation.x=-.12; box(.12,.015,.06,lam(0x5a4030),0,.008,.02,g); return g; },
+  mug(){ const t=patTex(256,64,(g,w,h)=>{ g.fillStyle='#f7f7f5'; g.fillRect(0,0,w,h); g.fillStyle='#0E5A55'; g.fillRect(0,40,w,10);
+      g.fillStyle='#2f6d3a'; for(let x=20;x<w;x+=64){ g.fillRect(x+6,14,3,24); for(let k=0;k<5;k++){ g.beginPath(); g.ellipse(x+7,14,12,3,k*.6,0,7); g.fill(); } } });
+    const g=new THREE.Group(), b=new THREE.Mesh(new THREE.CylinderGeometry(.045,.042,.1,20),[lam(0xffffff,{map:t}),lam(0xf7f7f5),lam(0xf7f7f5)]); b.position.y=.05; g.add(b);
+    const hd=new THREE.Mesh(new THREE.TorusGeometry(.027,.007,6,12),lam(0xf7f7f5)); hd.position.set(.05,.05,0); g.add(hd); return g; },
+  magnets(){ const t=patTex(128,96,(g,w,h)=>{ g.fillStyle='#e9e4da'; g.fillRect(0,0,w,h); const cs=['#c94c3a','#2c6fb5','#f2c230','#2f8f5b','#7a4b9a','#0E5A55'];
+      for(let i=0;i<6;i++){ g.fillStyle=cs[i]; g.fillRect(10+(i%3)*40,10+(i/3|0)*42,30,32); g.fillStyle='rgba(255,255,255,.7)'; g.fillRect(15+(i%3)*40,30+(i/3|0)*42,20,4); } });
+    const g=new THREE.Group(), b=box(.2,.15,.012,lam(0xffffff,{map:t}),0,.085,0,g); b.rotation.x=-.25; box(.05,.02,.08,lam(0x5a4030),0,.01,-.03,g); return g; },
+  keychain(){ const g=new THREE.Group(), m=phong(0xb9bcc0,90); box(.012,.26,.012,m,0,.13,0,g); box(.18,.012,.012,m,0,.25,0,g); box(.1,.012,.1,m,0,.006,0,g);
+    [-.07,0,.07].forEach(x=>{ box(.002,.04,.002,m,x,.225,0,g); const tg=box(.035,.05,.006,phong(0xd4a34a,90),x,.18,0,g); }); return g; },
+  notebook(){ const t=patTex(128,176,(g,w,h)=>{ g.fillStyle='#0E5A55'; g.fillRect(0,0,w,h); g.strokeStyle='#BDD5D2'; g.lineWidth=2;
+      for(let y=0;y<h;y+=22) for(let x=0;x<w;x+=22){ g.beginPath(); g.arc(x+11,y+11,8,0,7); g.stroke(); } });
+    const g=new THREE.Group(); box(.15,.018,.21,[lam(0xf2efe8),lam(0xf2efe8),lam(0xffffff,{map:t}),lam(0xf2efe8),lam(0xf2efe8),lam(0xf2efe8)],0,.009,0,g); return g; },
+  tote(){ const t=patTex(160,180,(g,w,h)=>{ g.fillStyle='#e8dcc4'; g.fillRect(0,0,w,h); g.fillStyle='#1C2321'; g.font='600 30px '+SANS; g.textAlign='center'; g.fillText('RIYADH',w/2,70);
+      g.font='600 30px '+AR; g.fillText('الرياض',w/2,115); g.fillStyle='#925274'; g.fillRect(30,140,100,6); });
+    const g=new THREE.Group(), b=box(.26,.3,.03,lam(0xffffff,{map:t}),0,.15,0,g); b.rotation.x=-.08;
+    const hd=new THREE.Mesh(new THREE.TorusGeometry(.06,.006,6,16,Math.PI),lam(0xd9c9a8)); hd.position.set(0,.3,0); g.add(hd); return g; },
+  dates(){ const t=patTex(220,150,(g,w,h)=>{ g.fillStyle='#3b2416'; g.fillRect(0,0,w,h); g.fillStyle='#c9a24a'; g.fillRect(0,60,w,14); g.strokeStyle='#c9a24a'; g.lineWidth=3; g.strokeRect(8,8,w-16,h-16); });
+    const g=new THREE.Group(), b=box(.22,.07,.15,[lam(0x3b2416),lam(0x3b2416),lam(0xffffff,{map:t}),lam(0x3b2416),lam(0x3b2416),lam(0x3b2416)],0,.035,0,g); return g; }
+};
+const PRODUCTS=[
+  {id:'dallah',en:'Brass dallah coffee pot',ar:'دلة قهوة نحاسية',price:180,local:1,n:2,
+   story:'Shaped and hammered by hand in a family workshop in Al-Ahsa, where brass coffee pots have been made for generations. Each one takes about two days.'},
+  {id:'sadu',en:'Sadu weave cushion',ar:'وسادة بنسيج السدو',price:140,local:1,n:2,
+   story:'Woven on a ground loom by an artisan in the Northern Borders region, using Al Sadu patterns that UNESCO lists as intangible cultural heritage.'},
+  {id:'mabkhara',en:'Painted incense burner',ar:'مبخرة ملونة',price:120,local:1,n:3,
+   story:'Carved from wood and painted by hand by an artisan in the Asir region, in the bright colours of Al-Qatt Al-Asiri.'},
+  {id:'basket',en:'Palm-frond basket',ar:'سلة من الخوص',price:85,local:1,n:2,
+   story:'Plaited from dried palm fronds by an artisan in Al-Qassim. This craft, called khoos, is passed down within families.'},
+  {id:'plate',en:'Hand-painted ceramic plate',ar:'صحن خزفي مرسوم يدويًا',price:110,local:1,n:2,
+   story:'Thrown and painted by hand in a small pottery studio in Riyadh, with patterns taken from old Najdi doors.'},
+  {id:'door',en:'Najdi door miniature',ar:'مجسم باب نجدي',price:130,local:1,n:2,
+   story:'Cut and painted by hand by a carpenter in Ushaiqer heritage village, copying the painted wooden doors of old Najdi houses.'},
+  {id:'mug',en:'Printed palm mug',ar:'كوب مطبوع',price:55,local:0,n:3},
+  {id:'magnets',en:'Fridge magnet set',ar:'مجموعة مغناطيس للثلاجة',price:25,local:0,n:2},
+  {id:'keychain',en:'Palm keychain',ar:'ميدالية مفاتيح',price:30,local:0,n:1},
+  {id:'notebook',en:'Patterned notebook',ar:'دفتر ملاحظات',price:45,local:0,n:3},
+  {id:'tote',en:'Canvas tote bag',ar:'حقيبة قماشية',price:60,local:0,n:2},
+  {id:'dates',en:'Date gift box',ar:'علبة تمور',price:75,local:0,n:2}
+];
+/* extra models for the eight Ministry of Culture souvenir categories */
+Object.assign(MAKE,{
+  tshirt(){ const t=patTex(200,160,(g,w,h)=>{ g.fillStyle='#f4f2ec'; g.fillRect(0,0,w,h); g.fillStyle='#1C2321'; g.textAlign='center'; g.textBaseline='middle';
+      g.font=`700 30px ${SANS}`; g.fillText('I',w/2-40,70); g.fillStyle='#1f6b4a'; g.beginPath(); g.moveTo(w/2,92); g.bezierCurveTo(w/2-34,62,w/2-14,40,w/2,58); g.bezierCurveTo(w/2+14,40,w/2+34,62,w/2,92); g.fill();
+      g.fillStyle='#1C2321'; g.fillText('SAUDI',w/2,118); });
+    const g=new THREE.Group(); for(let k=0;k<3;k++){ const m=[lam(0xf4f2ec),lam(0xf4f2ec),k===2?lam(0xffffff,{map:t}):lam(0xf4f2ec),lam(0xf4f2ec),lam(0xf4f2ec),lam(0xf4f2ec)]; box(.24,.03,.2,m,0,.015+k*.032,0,g); } return g; },
+  camel(){ const g=new THREE.Group(), m=lam(0xc9a36e), d=lam(0x8a6a44);
+    const body=new THREE.Mesh(new THREE.SphereGeometry(.07,14,10),m); body.scale.set(1.4,.9,.9); body.position.y=.1; g.add(body);
+    const hump=new THREE.Mesh(new THREE.SphereGeometry(.045,12,8),m); hump.position.set(0,.16,0); g.add(hump);
+    const neck=new THREE.Mesh(new THREE.CylinderGeometry(.022,.028,.1,8),m); neck.position.set(.1,.15,0); neck.rotation.z=-.6; g.add(neck);
+    const head=new THREE.Mesh(new THREE.SphereGeometry(.032,10,8),m); head.scale.set(1.4,1,1); head.position.set(.14,.2,0); g.add(head);
+    [[-.05,-.03],[-.05,.03],[.05,-.03],[.05,.03]].forEach(([x,z])=>{ const l=new THREE.Mesh(new THREE.CylinderGeometry(.014,.014,.07,6),d); l.position.set(x,.035,z); g.add(l); });
+    box(.05,.012,.09,lam(0x8c2a24),0,.165,0,g); return g; },
+  puzzle(){ const t=patTex(240,170,(g,w,h)=>{ const gr=g.createLinearGradient(0,0,0,h); gr.addColorStop(0,'#f2b56b'); gr.addColorStop(1,'#e9d3a8'); g.fillStyle=gr; g.fillRect(0,0,w,h);
+      g.fillStyle='#b98a58'; g.fillRect(20,80,200,70); g.fillStyle='#8a6040'; for(let x=30;x<210;x+=30) g.fillRect(x,95,14,20); g.fillStyle='#c9a379'; for(let x=20;x<220;x+=16){ g.beginPath(); g.moveTo(x,80); g.lineTo(x+8,66); g.lineTo(x+16,80); g.fill(); }
+      g.fillStyle='#1C2321'; g.font=`700 22px ${SANS}`; g.fillText('Old Riyadh · 500',14,30); });
+    const g=new THREE.Group(); box(.24,.06,.17,[lam(0xe9d3a8),lam(0xe9d3a8),lam(0xffffff,{map:t}),lam(0xe9d3a8),lam(0xe9d3a8),lam(0xe9d3a8)],0,.03,0,g); return g; },
+  storybook(){ const t=patTex(150,200,(g,w,h)=>{ g.fillStyle='#2c6fb5'; g.fillRect(0,0,w,h); g.fillStyle='#f2c230'; g.beginPath(); g.arc(110,40,18,0,7); g.fill();
+      g.fillStyle='#e9d3a8'; g.beginPath(); g.moveTo(0,h); g.quadraticCurveTo(70,120,w,150); g.lineTo(w,h); g.fill(); g.fillStyle='#8a6040'; g.fillRect(40,110,12,30);
+      g.fillStyle='#ffffff'; g.font=`700 20px ${AR}`; g.textAlign='center'; g.fillText('حكايات',w/2,80); });
+    const g=new THREE.Group(), b=box(.15,.2,.02,[lam(0xf2efe8),lam(0xf2efe8),lam(0x2c6fb5),lam(0x2c6fb5),lam(0xffffff,{map:t}),lam(0x2c6fb5)],0,.1,0,g); b.rotation.x=-.18; return g; },
+  coffee(){ const t=patTex(140,200,(g,w,h)=>{ g.fillStyle='#5a3a24'; g.fillRect(0,0,w,h); g.fillStyle='#e9d3a8'; g.fillRect(14,60,w-28,90); g.fillStyle='#5a3a24'; g.font=`700 22px ${AR}`; g.textAlign='center';
+      g.fillText('قهوة سعودية',w/2,95); g.font=`600 14px ${SANS}`; g.fillText('with cardamom',w/2,125); g.fillStyle='#2f5a50'; for(let k=0;k<3;k++){ g.beginPath(); g.ellipse(40+k*30,40,8,4,.5,0,7); g.fill(); } });
+    const g=new THREE.Group(); box(.11,.17,.06,[lam(0x5a3a24),lam(0x5a3a24),lam(0x5a3a24),lam(0x5a3a24),lam(0xffffff,{map:t}),lam(0x5a3a24)],0,.085,0,g); return g; },
+  honey(){ const g=new THREE.Group(), gl=new THREE.MeshPhongMaterial({color:0xd08a1e,shininess:120,specular:0xffffff,transparent:true,opacity:.92});
+    const j=new THREE.Mesh(new THREE.CylinderGeometry(.045,.045,.1,18),gl); j.position.y=.05; g.add(j);
+    const lid=new THREE.Mesh(new THREE.CylinderGeometry(.047,.047,.02,18),lam(0xc9a24a)); lid.position.y=.11; g.add(lid);
+    const lb=new THREE.Mesh(new THREE.CylinderGeometry(.046,.046,.04,18,1,true),lam(0xf4ead6)); lb.position.y=.05; g.add(lb); return g; },
+  rosewater(){ const g=new THREE.Group(), gl=new THREE.MeshPhongMaterial({color:0xf2b8c6,shininess:140,specular:0xffffff,transparent:true,opacity:.8});
+    g.add(new THREE.Mesh(new THREE.LatheGeometry(L2([[0,0],[.04,0],[.045,.02],[.045,.11],[.02,.15],[.014,.18],[0,.18]]),18),gl));
+    const cap=new THREE.Mesh(new THREE.CylinderGeometry(.016,.016,.03,12),lam(0xc9a24a)); cap.position.y=.195; g.add(cap);
+    const lb=new THREE.Mesh(new THREE.CylinderGeometry(.0455,.0455,.04,18,1,true),lam(0xfbf7ef)); lb.position.y=.07; g.add(lb); return g; },
+  oudoil(){ const g=new THREE.Group(), gl=new THREE.MeshPhongMaterial({color:0x6b3a12,shininess:150,specular:0xffeecc,transparent:true,opacity:.9});
+    const b=new THREE.Mesh(new THREE.CylinderGeometry(.03,.035,.08,6),gl); b.position.y=.04; g.add(b);
+    const n=new THREE.Mesh(new THREE.CylinderGeometry(.008,.008,.02,8),lam(0xc9a24a)); n.position.y=.09; g.add(n);
+    const top=new THREE.Mesh(new THREE.ConeGeometry(.022,.07,6),phong(0xc9a24a,100)); top.position.y=.135; g.add(top); return g; },
+  postcards(){ const t=patTex(120,170,(g,w,h)=>{ g.fillStyle='#f4ead6'; g.fillRect(0,0,w,h); g.fillStyle='#925274'; g.fillRect(10,10,w-20,h-50);
+      g.fillStyle='#f2c230'; g.beginPath(); g.arc(w/2,60,24,0,7); g.fill(); g.fillStyle='#1C2321'; g.beginPath(); g.arc(w/2,52,14,0,7); g.fill(); g.fillStyle='#0E5A55'; g.fillRect(w/2-20,74,40,40);
+      g.fillStyle='#1C2321'; g.font=`600 14px ${SANS}`; g.textAlign='center'; g.fillText('Set of 8',w/2,h-18); });
+    const g=new THREE.Group(); box(.14,.012,.1,lam(0x5a4030),0,.006,0,g); const c=box(.11,.16,.006,lam(0xffffff,{map:t}),0,.09,-.02,g); c.rotation.x=-.2; return g; },
+  artprint(){ const t=patTex(160,200,(g,w,h)=>{ const gr=g.createLinearGradient(0,0,0,h); gr.addColorStop(0,'#f6c98a'); gr.addColorStop(1,'#e48b5c'); g.fillStyle=gr; g.fillRect(0,0,w,h);
+      g.fillStyle='#c9a379'; g.fillRect(10,110,140,90); g.fillStyle='#8a6040'; for(let x=20;x<150;x+=26) g.fillRect(x,130,10,16); g.fillStyle='#b98a58'; g.fillRect(60,70,40,40);
+      g.fillStyle='#2f5a50'; g.fillRect(126,95,4,30); g.beginPath(); g.ellipse(128,92,16,5,0,0,7); g.fill(); });
+    const g=new THREE.Group(), f=box(.2,.25,.02,[lam(0x2b2118),lam(0x2b2118),lam(0x2b2118),lam(0x2b2118),lam(0xffffff,{map:t}),lam(0x2b2118)],0,.13,0,g); f.rotation.x=-.15;
+    box(.012,.2,.012,lam(0x5a4030),0,.09,-.06,g); return g; },
+  prayerrug(){ const t=patTex(160,256,(g,w,h)=>{ g.fillStyle='#1f4e3a'; g.fillRect(0,0,w,h); g.strokeStyle='#c9a24a'; g.lineWidth=6; g.strokeRect(10,10,w-20,h-20);
+      g.fillStyle='#2f6d55'; g.beginPath(); g.moveTo(30,h-30); g.lineTo(30,90); g.quadraticCurveTo(w/2,20,w-30,90); g.lineTo(w-30,h-30); g.fill();
+      g.strokeStyle='#e9d3a8'; g.lineWidth=2; g.beginPath(); g.moveTo(w/2,60); g.lineTo(w/2,h-40); g.stroke(); });
+    const g=new THREE.Group(); box(.26,.05,.18,[lam(0x1f4e3a),lam(0x1f4e3a),lam(0xffffff,{map:t}),lam(0x1f4e3a),lam(0x1f4e3a),lam(0x1f4e3a)],0,.025,.03,g);
+    const roll=new THREE.Mesh(new THREE.CylinderGeometry(.04,.04,.26,16),lam(0x1f4e3a)); roll.rotation.z=HP; roll.position.set(0,.04,-.1); g.add(roll); return g; },
+  tasbeeh(){ const g=new THREE.Group(), dish=new THREE.Mesh(new THREE.CylinderGeometry(.08,.06,.02,20),lam(0xd9c7a6)); dish.position.y=.01; g.add(dish);
+    const bm=phong(0x5a2a6e,120); for(let k=0;k<33;k++){ const a=k/33*Math.PI*2, r=.05+.008*Math.sin(a*3); const s=new THREE.Mesh(new THREE.SphereGeometry(.007,6,5),bm); s.position.set(Math.cos(a)*r,.026,Math.sin(a)*r); g.add(s); }
+    const tassel=new THREE.Mesh(new THREE.ConeGeometry(.01,.03,6),phong(0xc9a24a,80)); tassel.position.set(.06,.03,0); tassel.rotation.z=HP; g.add(tassel); return g; },
+  rehal(){ const g=new THREE.Group(), t=patTex(64,128,(g,w,h)=>{ g.fillStyle='#8a5a32'; g.fillRect(0,0,w,h); g.strokeStyle='#5a3a1c'; g.lineWidth=3;
+      for(let y=10;y<h;y+=24){ g.beginPath(); g.arc(w/2,y,9,0,7); g.stroke(); g.beginPath(); g.moveTo(8,y+12); g.lineTo(w-8,y+12); g.stroke(); } });
+    const m=lam(0xffffff,{map:t}); const a=box(.18,.22,.012,m,0,.1,.03,g); a.rotation.x=.75; const b=box(.18,.22,.012,m,0,.1,-.03,g); b.rotation.x=-.75; return g; }
+});
+PRODUCTS.length=0;
+[
+  /* 01 Commercial souvenirs */
+  {id:'magnets',cat:'commercial',en:'Fridge magnet set',ar:'مجموعة مغناطيس للثلاجة',price:25,local:0,n:2},
+  {id:'mug',cat:'commercial',en:'Printed palm mug',ar:'كوب مطبوع',price:55,local:0,n:3},
+  {id:'keychain',cat:'commercial',en:'Palm keychain',ar:'ميدالية مفاتيح',price:30,local:0,n:1},
+  /* 02 Handicrafts */
+  {id:'dallah',cat:'handicrafts',en:'Brass dallah coffee pot',ar:'دلة قهوة نحاسية',price:180,local:1,n:2,
+   story:'Shaped and hammered by hand in a family workshop in Al-Ahsa, where brass coffee pots have been made for generations. Each one takes about two days.'},
+  {id:'plate',cat:'handicrafts',en:'Hand-painted ceramic plate',ar:'صحن خزفي مرسوم يدويًا',price:110,local:1,n:2,
+   story:'Thrown and painted by hand in a small pottery studio in Riyadh, with patterns taken from old Najdi doors.'},
+  {id:'door',cat:'handicrafts',en:'Najdi door miniature',ar:'مجسم باب نجدي',price:130,local:1,n:2,
+   story:'Cut and painted by hand by a carpenter in Ushaiqer heritage village, copying the painted wooden doors of old Najdi houses.'},
+  {id:'basket',cat:'handicrafts',en:'Palm-frond basket',ar:'سلة من الخوص',price:85,local:1,n:2,
+   story:'Plaited from dried palm fronds by an artisan in Al-Qassim. This craft, called khoos, is passed down within families.'},
+  /* 03 Fashion and textiles */
+  {id:'sadu',cat:'fashion',en:'Sadu weave cushion',ar:'وسادة بنسيج السدو',price:140,local:1,n:2,
+   story:'Woven on a ground loom by an artisan in the Northern Borders region, using Al Sadu patterns that UNESCO lists as intangible cultural heritage.'},
+  {id:'tote',cat:'fashion',en:'Canvas tote bag',ar:'حقيبة قماشية',price:60,local:0,n:2},
+  {id:'tshirt',cat:'fashion',en:'"I love Saudi" T-shirt',ar:'تيشيرت أحب السعودية',price:70,local:0,n:2},
+  /* 04 Toys and games for children */
+  {id:'camel',cat:'toys',en:'Plush camel toy',ar:'لعبة جمل محشوة',price:65,local:0,n:3},
+  {id:'puzzle',cat:'toys',en:'Old Riyadh jigsaw puzzle',ar:'أحجية الرياض القديمة',price:50,local:0,n:2},
+  {id:'storybook',cat:'toys',en:'Saudi folk tales story book',ar:'كتاب حكايات شعبية',price:40,local:0,n:3},
+  /* 05 Food products */
+  {id:'dates',cat:'food',en:'Date gift box',ar:'علبة تمور',price:75,local:0,n:2},
+  {id:'coffee',cat:'food',en:'Saudi coffee with cardamom',ar:'قهوة سعودية بالهيل',price:45,local:0,n:3},
+  {id:'honey',cat:'food',en:'Sidr honey jar',ar:'عسل سدر',price:120,local:0,n:3},
+  /* 06 Nature-based products */
+  {id:'rosewater',cat:'nature',en:'Taif rose water',ar:'ماء ورد طائفي',price:60,local:0,n:3},
+  {id:'oudoil',cat:'nature',en:'Oud perfume oil',ar:'دهن عود',price:150,local:0,n:3},
+  {id:'mabkhara',cat:'nature',en:'Painted incense burner',ar:'مبخرة ملونة',price:120,local:1,n:3,
+   story:'Carved from wood and painted by hand by an artisan in the Asir region, in the bright colours of Al-Qatt Al-Asiri.'},
+  /* 07 Pop culture goods */
+  {id:'postcards',cat:'popculture',en:'Illustrated postcard set',ar:'مجموعة بطاقات مصورة',price:29,local:0,n:2},
+  {id:'artprint',cat:'popculture',en:'Framed Diriyah art print',ar:'لوحة مطبوعة للدرعية',price:95,local:0,n:2},
+  {id:'notebook',cat:'popculture',en:'Patterned notebook',ar:'دفتر ملاحظات',price:45,local:0,n:3},
+  /* 08 Religious and spiritual souvenirs */
+  {id:'prayerrug',cat:'religious',en:'Prayer rug',ar:'سجادة صلاة',price:120,local:0,n:2},
+  {id:'tasbeeh',cat:'religious',en:'Tasbeeh beads',ar:'مسبحة',price:35,local:0,n:2},
+  {id:'rehal',cat:'religious',en:'Carved wooden Quran stand',ar:'رحل خشبي منحوت',price:110,local:1,n:2,
+   story:'Carved from a single piece of wood by a woodcarver in Al-Madinah, then folded open without any joints or nails.'}
+].forEach(p=>PRODUCTS.push(p));
+const CATS={ commercial:'Commercial souvenirs', handicrafts:'Handicrafts', fashion:'Fashion and textiles', toys:'Toys and games for children', food:'Food products', nature:'Nature-based products', popculture:'Pop culture goods', religious:'Religious and spiritual souvenirs' };
+const PBY={}; PRODUCTS.forEach(p=>PBY[p.id]=p);
+/* ---------- Experiences sold through the digital screen ---------- */
+Object.assign(CATS,{ workshops:'Handicraft workshops', performances:'Theatre and performances', heritage:'Heritage and archaeological site vouchers' });
+const EXP_TABS=[['workshops','Workshops','ورش حرفية'],['performances','Performances','عروض'],['heritage','Heritage sites','مواقع تراثية']];
+const EXPERIENCES=[
+  {id:'x-sadu',cat:'workshops',en:'Sadu weaving workshop',ar:'ورشة نسيج السدو',price:150,meta:'2 hours · Saturday mornings · materials included',desc:'Learn the basic Sadu patterns on a small loom with an experienced weaver, and take your piece home.'},
+  {id:'x-pottery',cat:'workshops',en:'Pottery wheel class',ar:'دورة صناعة الفخار',price:120,meta:'90 minutes · weekday evenings',desc:'Throw a bowl on the wheel and paint it with Najdi patterns. It is fired and ready to collect a week later.'},
+  {id:'x-qatt',cat:'workshops',en:'Al-Qatt Al-Asiri painting',ar:'ورشة القط العسيري',price:100,meta:'2 hours · Friday afternoons',desc:'Paint a wooden panel in the bright geometric style of the Asir region.'},
+  {id:'x-khoos',cat:'workshops',en:'Palm-frond weaving for families',ar:'ورشة سف الخوص للعائلات',price:80,meta:'1 hour · ages 7 and up',desc:'A hands-on session to plait a small basket from dried palm fronds together.'},
+  {id:'x-family',cat:'performances',en:'Family theatre: Tales of Old Riyadh',ar:'مسرح العائلة: حكايات الرياض القديمة',price:75,meta:'75 minutes · Thursdays',desc:'A light family play bringing old Riyadh neighbourhood stories to the stage.'},
+  {id:'x-drama',cat:'performances',en:'Contemporary Saudi drama',ar:'عرض مسرحي سعودي معاصر',price:120,meta:'2 hours · weekend evenings',desc:'A new play by a Saudi theatre company, performed in Arabic.'},
+  {id:'x-ardah',cat:'performances',en:'Saudi Ardah folk performance',ar:'عرض العرضة السعودية',price:60,meta:'45 minutes · open-air',desc:'The national sword dance with drums and poetry, performed by a heritage troupe.'},
+  {id:'x-oud',cat:'performances',en:'Oud music evening',ar:'أمسية عود',price:90,meta:'90 minutes · Wednesdays',desc:'An intimate evening of classical and Saudi oud pieces.'},
+  {id:'x-turaif',cat:'heritage',en:'At-Turaif District guided visit, Diriyah',ar:'زيارة مع مرشد لحي الطريف بالدرعية',price:120,meta:'Voucher · valid 6 months',desc:'A guided walk through the mud-brick palaces of the first Saudi state, a UNESCO World Heritage Site.'},
+  {id:'x-hegra',cat:'heritage',en:'Hegra guided tour, AlUla',ar:'جولة مع مرشد في الحجر بالعلا',price:250,meta:'Voucher · valid 12 months',desc:'Visit the Nabataean tombs of Hegra, Saudi Arabia\'s first UNESCO World Heritage Site.'},
+  {id:'x-ushaiqer',cat:'heritage',en:'Ushaiqer heritage village walk',ar:'جولة في قرية أشيقر التراثية',price:70,meta:'Voucher · valid 6 months',desc:'A guided walk through one of Najd\'s best-preserved old villages and its palm groves.'},
+  {id:'x-masmak',cat:'heritage',en:'Al Masmak Palace Museum guided tour',ar:'جولة مع مرشد في قصر المصمك',price:40,meta:'Voucher · valid 6 months',desc:'A guided tour of the fort at the heart of old Riyadh and the story of the Kingdom\'s founding.'}
+];
+EXPERIENCES.forEach(e=>{ e.experience=1; e.local=0; e.zone='front'; e.area='digital screen'; PBY[e.id]=e; });
+/* the screen itself: a standing kiosk between the two front tables */
+const kioskTex=canvasTex(512,384,(g,w,h)=>{ const gr=g.createLinearGradient(0,0,0,h); gr.addColorStop(0,'#0E5A55'); gr.addColorStop(1,'#1C2321'); g.fillStyle=gr; g.fillRect(0,0,w,h);
+  g.textBaseline='middle'; g.fillStyle='#ffffff'; g.font=`700 34px ${SANS}`; g.fillText('Discover more',28,44); g.font=`600 30px ${AR}`; g.textAlign='right'; g.fillText('اكتشف المزيد',w-28,44); g.textAlign='left';
+  g.fillStyle='#BDD5D2'; g.font=`500 18px ${SANS}`; g.fillText('Workshops, performances and heritage site vouchers',28,82);
+  const tiles=[['Workshops','#c9a24a'],['Performances','#925274'],['Heritage sites','#5F9890']];
+  tiles.forEach(([t,c],i)=>{ const x=28+i*156, y=118; g.fillStyle=c; g.fillRect(x,y,144,190); g.fillStyle='rgba(255,255,255,.9)';
+    if(i===0){ /* a clay pot with a paintbrush */ const cx=x+64, cy=y+72;
+      g.beginPath(); g.moveTo(cx-12,cy-40); g.lineTo(cx+12,cy-40); g.quadraticCurveTo(cx+8,cy-28,cx+26,cy-12); g.quadraticCurveTo(cx+40,cy+16,cx+16,cy+38); g.lineTo(cx-16,cy+38);
+      g.quadraticCurveTo(cx-40,cy+16,cx-26,cy-12); g.quadraticCurveTo(cx-8,cy-28,cx-12,cy-40); g.closePath(); g.fill();
+      g.fillStyle=c; g.fillRect(cx-22,cy+2,44,5); g.fillRect(cx-18,cy+14,36,4);
+      g.save(); g.translate(cx+34,cy-26); g.rotate(.6); g.fillStyle='rgba(255,255,255,.95)'; g.fillRect(-3,-30,6,40); g.fillStyle='#5a3a24'; g.beginPath(); g.moveTo(-5,10); g.lineTo(5,10); g.lineTo(0,24); g.closePath(); g.fill(); g.restore(); }
+    if(i===1){ /* a stage with open curtains and a spotlight */ const L=x+28, R=x+116, T=y+30, B=y+108;
+      g.fillRect(L-4,T-8,R-L+8,12);
+      g.beginPath(); g.moveTo(L,T); g.lineTo(L+26,T); g.quadraticCurveTo(L+12,(T+B)/2,L+22,B); g.lineTo(L,B); g.closePath(); g.fill();
+      g.beginPath(); g.moveTo(R,T); g.lineTo(R-26,T); g.quadraticCurveTo(R-12,(T+B)/2,R-22,B); g.lineTo(R,B); g.closePath(); g.fill();
+      g.fillStyle='rgba(255,236,170,.75)'; g.beginPath(); g.moveTo(x+72,T+6); g.lineTo(x+58,B); g.lineTo(x+86,B); g.closePath(); g.fill();
+      g.fillStyle='rgba(255,255,255,.9)'; g.fillRect(L-8,B,R-L+16,8); }
+    if(i===2){ g.fillRect(x+36,y+62,72,40); g.fillStyle=c; for(let k=0;k<4;k++) g.fillRect(x+44+k*16,y+74,8,16); g.fillStyle='rgba(255,255,255,.9)'; for(let k=0;k<5;k++){ g.beginPath(); g.moveTo(x+36+k*14.4,y+62); g.lineTo(x+43+k*14.4,y+50); g.lineTo(x+50+k*14.4,y+62); g.fill(); } }
+    g.fillStyle='#ffffff'; g.font=`600 19px ${SANS}`; g.textAlign='center'; g.fillText(t,x+72,y+150); g.textAlign='left'; });
+  g.fillStyle='#f2c230'; g.font=`600 18px ${SANS}`; g.fillText('Tap the screen to browse',28,h-34); });
+SIGN_TEX.push(kioskTex);
+const kioskG=new THREE.Group(); scene.add(kioskG);
+box(.5,.06,.4,lam(0x2b2f33),0,.03,0,kioskG); box(.12,1.0,.12,lam(0x3a3f44),0,.55,0,kioskG);
+const kHead=new THREE.Group(); kHead.position.set(0,1.25,0); kHead.rotation.x=-.35; kioskG.add(kHead);
+box(.74,.56,.05,lam(0x1b1d20),0,0,0,kHead);
+const kScreen=new THREE.Mesh(new THREE.PlaneGeometry(.68,.51),basic(0xffffff,{map:kioskTex})); kScreen.position.z=.027; kHead.add(kScreen);
+kioskG.position.set(0,0,.45); solid(-.35,.35,.15,.75);
+const KIOSK={id:'kiosk',g:kioskG}; PBY.kiosk=KIOSK;
+/* 25 display spots in four areas: front tables and the counter by the entrance/exit (front of the shop); middle tables and the back counter (back of the shop) */
+const SLOT=(x,z,y,rot,area,zone)=>({x,z,y,rot,area,zone});
+const FRONT_SLOTS=[[-2.3,1.8],[-1.6,1.8],[-.9,1.8],[.9,1.8],[1.6,1.8],[2.3,1.8]].map(([x,z])=>SLOT(x,z,.86,0,'front tables','front'));
+const ENTRY_SLOTS=[-2.2,-1.1,0,1.1,2.2].map(x=>SLOT(x,4.6,.945,Math.PI,'counter by the exit','front'));
+const MID_SLOTS=[[-4.3,-1.2],[-3.6,-1.2],[-2.9,-1.2],[2.9,-1.2],[3.6,-1.2],[4.3,-1.2]].map(([x,z])=>SLOT(x,z,.86,0,'middle tables','back'));
+const BACK_SLOTS=[-5,-3.57,-2.14,-.71,.71,2.14,3.57,5].map(x=>SLOT(x,-4.45,.945,0,'back counter','back'));
+const COPY_POS={1:[[0,-.05]],2:[[-.13,-.08],[.13,-.08]],3:[[-.15,-.02],[.15,-.02],[0,-.2]]};
+const HOVERABLE=[];
+/* kiosk meshes are picked like products */
+const HOVER_KIOSK=()=>{ kioskG.traverse(o=>{ if(o.isMesh){ o.userData.pid='kiosk'; HOVERABLE.push(o); } }); };
+const tagTex=(p)=>canvasTex(256,128,(g,w,h)=>{ g.fillStyle='#fbf7ef'; g.fillRect(0,0,w,h); g.fillStyle='#1C2321'; g.textBaseline='middle';
+  g.font=`700 46px ${SANS}`; g.textAlign='left'; g.fillText(`${p.price}`,14,48); g.font=`500 22px ${SANS}`; g.fillText('SAR',14+g.measureText(`${p.price}`).width*2.1,52);
+  g.font=`500 20px ${SANS}`; g.fillStyle='#4b4b48'; let t=p.en; if(t.length>22) t=t.slice(0,21)+'…'; g.fillText(t,14,100); });
+const LABEL_TEX=canvasTex(320,112,(g,w,h)=>{ g.fillStyle='#1f6b4a'; g.fillRect(0,0,w,h); g.fillStyle='#ffffff'; g.textBaseline='middle'; g.textAlign='center';
+  g.font=`600 26px ${SANS}`; g.fillText('Handmade in Saudi Arabia',w/2,34); g.font=`600 28px ${AR}`; g.fillText('صناعة يدوية سعودية',w/2,80); });
+const storyTex=(p)=>canvasTex(288,208,(g,w,h)=>{ g.fillStyle='#f4ead6'; g.fillRect(0,0,w,h); g.strokeStyle='#8a6a48'; g.lineWidth=4; g.strokeRect(4,4,w-8,h-8);
+  g.fillStyle='#1f6b4a'; g.font=`700 24px ${SANS}`; g.textBaseline='top'; g.fillText('Meet the maker',16,14); g.fillStyle='#2b2118'; g.font=`400 17px ${SANS}`;
+  const words=p.story.split(' '); let line='', y=50; for(const wd of words){ const tl=line?line+' '+wd:wd; if(g.measureText(tl).width>w-32){ g.fillText(line,16,y); y+=22; line=wd; if(y>h-30) break; } else line=tl; } if(y<=h-30) g.fillText(line,16,y); });
+PRODUCTS.forEach(p=>{
+  const pg=new THREE.Group(); pg.userData.pid=p.id; scene.add(pg);
+  box(.56,.03,.42,lam(0xd9c7a6),0,.015,-.05,pg);
+  COPY_POS[p.n].forEach(([dx,dz],k)=>{ const c=MAKE[p.id](); c.position.set(dx,.03,dz); c.rotation.y=(k-1)*.25; pg.add(c); });
+  pg.traverse(o=>{ if(o.isMesh){ o.userData.pid=p.id; HOVERABLE.push(o); } });
+  const tg=new THREE.Group(); scene.add(tg);
+  const pt=new THREE.Mesh(new THREE.PlaneGeometry(.17,.085),basic(0xffffff,{map:tagTex(p)})); pt.rotation.x=-.9; pt.position.set(-.06,.06,.2); tg.add(pt); SIGN_TEX.push(pt.material.map);
+  let lt=null, st=null;
+  if(p.local){ lt=new THREE.Mesh(new THREE.PlaneGeometry(.17,.06),basic(0xffffff,{map:LABEL_TEX})); lt.rotation.x=-.9; lt.position.set(.14,.05,.2); tg.add(lt);
+    st=new THREE.Group(); const card=new THREE.Mesh(new THREE.PlaneGeometry(.18,.13),basic(0xffffff,{map:storyTex(p)})); card.position.y=.1; st.add(card); box(.012,.08,.012,lam(0x5a4030),0,.04,-.01,st);
+    st.position.set(-.25,.03,.12); st.rotation.x=-.15; tg.add(st); SIGN_TEX.push(card.material.map); }
+  p.g=pg; p.tags=tg; p.labelTag=lt; p.storyCard=st;
+});
+if(!SIGN_TEX.includes(LABEL_TEX)) SIGN_TEX.push(LABEL_TEX);
+HOVER_KIOSK();
+/* put each product on its slot for the current condition, and show the labels and maker cards it calls for */
+function layoutProducts(){
+  const loc=PRODUCTS.filter(p=>p.local), gen=PRODUCTS.filter(p=>!p.local);
+  /* the seven handmade crafts take the best spots of their area; everything else fills the rest, kept together by category */
+  const order=S.place==='front'?[...FRONT_SLOTS,...ENTRY_SLOTS,...BACK_SLOTS,...MID_SLOTS]:[...BACK_SLOTS,...FRONT_SLOTS,...ENTRY_SLOTS,...MID_SLOTS];
+  loc.forEach((p,i)=>{ p.slot=order[i]; }); gen.forEach((p,i)=>{ p.slot=order[loc.length+i]; });
+  PRODUCTS.forEach(p=>{ const s=p.slot; p.zone=s.zone; p.area=s.area; p.g.position.set(s.x,s.y,s.z); p.tags.position.set(s.x,s.y,s.z); p.g.rotation.y=s.rot; p.tags.rotation.y=s.rot;
+    if(p.labelTag) p.labelTag.visible=S.info!=='plain'; if(p.storyCard) p.storyCard.visible=S.info==='story'; });
+}
+layoutProducts();
+
+/* ---------- Audio (generated in the browser) ---------- */
+const AU={ctx:null};
+function audioInit(){
+  if(AU.ctx){ if(AU.ctx.state==='suspended') AU.ctx.resume(); return; }
+  const C=window.AudioContext||window.webkitAudioContext; if(!C) return;
+  const ctx=new C(); AU.ctx=ctx;
+  AU.master=ctx.createGain(); AU.master.gain.value=S.prep.volume;
+  const comp=ctx.createDynamicsCompressor(); AU.master.connect(comp); comp.connect(ctx.destination);
+  AU.verb=ctx.createConvolver(); AU.verb.buffer=impulse(2.8,2.2);
+  const vo=ctx.createGain(); vo.gain.value=.55; AU.verb.connect(vo); vo.connect(AU.master);
+  const len=ctx.sampleRate*4, nb=ctx.createBuffer(1,len,ctx.sampleRate), d=nb.getChannelData(0);
+  for(let i=0;i<len;i++) d[i]=RND()*2-1; AU.noise=nb;
+  const bb=ctx.createBuffer(1,len,ctx.sampleRate), bd=bb.getChannelData(0); let lastB=0;
+  for(let i=0;i<len;i++){ lastB=(lastB+.02*(RND()*2-1))/1.02; bd[i]=lastB*3.5; } AU.brown=bb;
+}
+function impulse(dur,decay){ const ctx=AU.ctx, len=ctx.sampleRate*dur, b=ctx.createBuffer(2,len,ctx.sampleRate);
+  for(let ch=0;ch<2;ch++){ const d=b.getChannelData(ch); for(let i=0;i<len;i++) d[i]=(RND()*2-1)*Math.pow(1-i/len,decay); } return b; }
+function brownSrc(){ const s=AU.ctx.createBufferSource(); s.buffer=AU.brown; s.loop=true; s.start(AU.ctx.currentTime, RND()*3); return s; }
+function noiseSrc(){ const s=AU.ctx.createBufferSource(); s.buffer=AU.noise; s.loop=true; s.start(AU.ctx.currentTime, RND()*3); return s; }
+const mtof=m=>440*Math.pow(2,(m-69)/12);
+function tone(o){
+  const ctx=AU.ctx; if(!ctx) return;
+  const {freq,type='sine',t,dur,gain=.2,attack=.01,dest=AU.master,verb=0,pan=0,freqEnd=null}=o;
+  const os=ctx.createOscillator(); os.type=type; os.frequency.setValueAtTime(freq,t);
+  if(freqEnd) os.frequency.exponentialRampToValueAtTime(freqEnd,t+dur*.9);
+  const g=ctx.createGain(); g.gain.setValueAtTime(.0001,t); g.gain.exponentialRampToValueAtTime(gain,t+attack); g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+  os.connect(g); let node=g;
+  if(pan && ctx.createStereoPanner){ const p=ctx.createStereoPanner(); p.pan.value=pan; g.connect(p); node=p; }
+  node.connect(dest);
+  if(verb){ const v=ctx.createGain(); v.gain.value=verb; node.connect(v); v.connect(AU.verb); }
+  os.start(t); os.stop(t+dur+.05);
+}
+function noiseHit(t,dur,gain,ftype,freq,dest){
+  const ctx=AU.ctx, s=ctx.createBufferSource(); s.buffer=AU.noise;
+  const f=ctx.createBiquadFilter(); f.type=ftype; f.frequency.value=freq;
+  const g=ctx.createGain(); g.gain.setValueAtTime(gain,t); g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+  s.connect(f); f.connect(g); g.connect(dest); s.start(t,RND()*3); s.stop(t+dur+.02);
+}
+function fadeOut(out,nodes,timers){
+  const t=AU.ctx.currentTime; out.gain.cancelScheduledValues(t); out.gain.setValueAtTime(out.gain.value,t); out.gain.linearRampToValueAtTime(0,t+1);
+  (timers||[]).forEach(id=>{ clearTimeout(id); clearInterval(id); });
+  setTimeout(()=>{ nodes.forEach(n=>{ try{ n.stop(); }catch(e){} }); try{ out.disconnect(); }catch(e){} },1200);
+}
+/* Condition layer */
+const CALM=[[48,55,64,71],[45,52,60,67],[41,48,57,64],[43,50,59,62]];
+const BASS=[36,null,36,null,null,39,null,41,43,null,43,null,41,null,39,null];
+function calmStep(L,t){
+  CALM[L.step%4].forEach((m,i)=>tone({freq:mtof(m),type:i?'triangle':'sine',t,dur:5.6,gain:i?.035:.06,attack:1.6,dest:L.out,verb:.5}));
+  const pent=[72,74,76,79,81];
+  for(let j=0;j<2;j++) if(RND()<.75) tone({freq:mtof(pent[RND()*5|0]),t:t+.8+j*2.2+RND()*.4,dur:2.4,gain:.03,attack:.05,dest:L.out,verb:.7});
+  L.step++; L.next=t+4.8;
+}
+function stimStep(L,t){
+  const sx=60/112/4, s=L.step%16, bar=(L.step/16|0)%4, tr=[0,0,5,3][bar], ctx=AU.ctx;
+  if(s===0||s===8||(s===10&&bar%2)){ const o=ctx.createOscillator(), g=ctx.createGain(); o.frequency.setValueAtTime(140,t); o.frequency.exponentialRampToValueAtTime(45,t+.18); g.gain.setValueAtTime(.32,t); g.gain.exponentialRampToValueAtTime(.0001,t+.25); o.connect(g); g.connect(L.out); o.start(t); o.stop(t+.3); }
+  if(s===4||s===12){ noiseHit(t,.15,.11,'bandpass',1800,L.out); tone({freq:190,t,dur:.12,gain:.06,dest:L.out}); }
+  if(s%2===1) noiseHit(t,.04,s%4===3?.04:.02,'highpass',7000,L.out);
+  const b=BASS[s]; if(b!=null) tone({freq:mtof(b+tr),type:'sawtooth',t,dur:sx*1.8,gain:.08,attack:.005,dest:L.lp});
+  if(s===6||s===14) [60,63,67,70].forEach(m=>tone({freq:mtof(m+tr),type:'square',t,dur:sx*1.5,gain:.016,attack:.005,dest:L.lp2,verb:.2}));
+  if(s%2===0&&RND()<.35) tone({freq:mtof([72,75,79,82][RND()*4|0]+tr),type:'triangle',t,dur:sx*2,gain:.03,dest:L.out,verb:.3});
+  L.step++; L.next=t+sx;
+}
+function natureSetup(L){
+  const ctx=AU.ctx;
+  /* a small indoor fountain: soft, bright water with a gentle trickle, no low rumble */
+  const n=noiseSrc(), hp=ctx.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=1400; const pk=ctx.createBiquadFilter(); pk.type='peaking'; pk.frequency.value=3400; pk.gain.value=5;
+  const g=ctx.createGain(); g.gain.value=.008; n.connect(hp); hp.connect(pk); pk.connect(g); g.connect(L.out);
+  const lfo=ctx.createOscillator(); lfo.type='triangle'; lfo.frequency.value=.41; const lg=ctx.createGain(); lg.gain.value=.003; lfo.connect(lg); lg.connect(g.gain); lfo.start();
+  const drip=()=>{ if(AU.layer!==L) return; const t=ctx.currentTime+.02, f=900+RND()*700; tone({freq:f,freqEnd:f*1.8,t,dur:.06,gain:.007,dest:L.out,verb:.5,pan:RND()*.6-.3}); L.timers.push(setTimeout(drip,250+RND()*900)); };
+  /* leaves rustling now and then */
+  const n2=noiseSrc(), f2=ctx.createBiquadFilter(); f2.type='bandpass'; f2.frequency.value=5600; f2.Q.value=.6; const g2=ctx.createGain(); g2.gain.value=0; n2.connect(f2); f2.connect(g2); g2.connect(L.out);
+  L.nodes.push(n,lfo,n2);
+  const rustle=()=>{ if(AU.layer!==L) return; const t=ctx.currentTime; g2.gain.cancelScheduledValues(t); g2.gain.setValueAtTime(0,t); g2.gain.linearRampToValueAtTime(.01+RND()*.008,t+1.4); g2.gain.linearRampToValueAtTime(0,t+3.5+RND()*2); L.timers.push(setTimeout(rustle,5000+RND()*6000)); };
+  /* birds, clearly audible and often overlapping: bulbuls, house sparrows, a laughing dove and a warbler's trill */
+  const chirp=(t,f0,f1,dur,gain,pan,harm)=>{ const o=ctx.createOscillator(), g=ctx.createGain(); o.frequency.setValueAtTime(f0,t); o.frequency.exponentialRampToValueAtTime(f1,t+dur);
+    g.gain.setValueAtTime(.0001,t); g.gain.exponentialRampToValueAtTime(gain,t+Math.min(.012,dur*.25)); g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+    let node=g; if(ctx.createStereoPanner){ const pn=ctx.createStereoPanner(); pn.pan.value=pan; g.connect(pn); node=pn; } node.connect(L.out); const v=ctx.createGain(); v.gain.value=.25; node.connect(v); v.connect(AU.verb);
+    o.connect(g); o.start(t); o.stop(t+dur+.02);
+    if(harm){ const o2=ctx.createOscillator(), g2=ctx.createGain(); o2.frequency.setValueAtTime(f0*2,t); o2.frequency.exponentialRampToValueAtTime(f1*2,t+dur); g2.gain.value=harm; o2.connect(g2); g2.connect(g); o2.start(t); o2.stop(t+dur+.02); } };
+  const SONGS=[
+    /* white-eared bulbul: a bubbly, liquid phrase */
+    (t,p)=>{ const b=1300+RND()*400; [[1,1.35,.09],[1.4,1.1,.08],[1.15,1.5,.1],[1.5,1.0,.16]].forEach(([a,e,d],k)=>chirp(t+k*.13,b*a,b*e,d,.1,p,.15)); },
+    /* house sparrow: a run of bright cheeps */
+    (t,p)=>{ const n=3+RND()*4|0, b=3200+RND()*700; for(let k=0;k<n;k++) chirp(t+k*.16+RND()*.03,b*(1+RND()*.08),b*.7,.07,.075,p,.35); },
+    /* laughing dove: a soft, low rolling coo */
+    (t,p)=>{ const b=520+RND()*80; [[1,1.05,.16],[1.1,1,.12],[1.05,.95,.12],[1.12,1.02,.14],[1,.92,.26]].forEach(([a,e,d],k)=>chirp(t+k*.19,b*a,b*e,d,.08,p,0)); },
+    /* warbler: a fast silvery trill */
+    (t,p)=>{ const b=4200+RND()*800; for(let k=0;k<14;k++) chirp(t+k*.05,b*(k%2?1.12:1),b*(k%2?1.0:1.08),.035,.05,p,0); },
+    /* a two-note whistle */
+    (t,p)=>{ const b=2100+RND()*500; chirp(t,b,b*1.2,.22,.09,p,.1); chirp(t+.3,b*1.15,b*.85,.28,.09,p,.1); }
+  ];
+  const bird=()=>{ if(AU.layer!==L) return; const t=ctx.currentTime+.05;
+    SONGS[RND()*SONGS.length|0](t,RND()*1.6-.8);
+    if(RND()<.35) SONGS[RND()*SONGS.length|0](t+.4+RND()*.8,RND()*1.6-.8);   /* another bird answers */
+    L.timers.push(setTimeout(bird,900+RND()*2200)); };
+  L.timers.push(setTimeout(bird,250),setTimeout(rustle,2500),setTimeout(drip,400));
+}
+function layerStart(type){
+  layerStop(); if(!AU.ctx||type==='none') return; const ctx=AU.ctx;
+  const out=ctx.createGain(); out.gain.value=0; out.connect(AU.master); out.gain.linearRampToValueAtTime(1,ctx.currentTime+2);
+  const L={type,out,nodes:[],timers:[],next:ctx.currentTime+.1,step:0};
+  AU.layer=L;
+  if(type==='nature'){ natureSetup(L); return; }
+  if(type==='oud'){ oudSetup(L); return; }
+  if(type==='stim'){ L.lp=ctx.createBiquadFilter(); L.lp.type='lowpass'; L.lp.frequency.value=700; L.lp.connect(out);
+    L.lp2=ctx.createBiquadFilter(); L.lp2.type='lowpass'; L.lp2.frequency.value=2200; L.lp2.connect(out); }
+  const step=type==='calm'?calmStep:stimStep;
+  L.timers.push(setInterval(()=>{ while(L.next<ctx.currentTime+.25) step(L,L.next); },50));
+}
+const OUD_BUF={};
+function oudBuf(midi){ if(OUD_BUF[midi]) return OUD_BUF[midi]; const ctx=AU.ctx, sr=ctx.sampleRate, f=mtof(midi), N=Math.max(2,Math.round(sr/f)), len=Math.round(sr*2.2);
+  const b=ctx.createBuffer(1,len,sr), d=b.getChannelData(0), ring=new Float32Array(N); let prev=0;
+  for(let i=0;i<N;i++){ const v=RND()*2-1; prev=prev*.55+v*.45; ring[i]=prev; }
+  const decay=midi<45?.9975:.9955;
+  for(let i=0;i<len;i++){ const k=i%N, nx=(k+1)%N; d[i]=ring[k]; ring[k]=(ring[k]+ring[nx])*.5*decay; }
+  return OUD_BUF[midi]=b; }
+function pluck(L,m,t,gain){ const base=Math.round(m), ctx=AU.ctx, s=ctx.createBufferSource(); s.buffer=oudBuf(base); s.detune.value=(m-base)*100+(RND()-.5)*6;
+  const lp=ctx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=base<45?800:2000; const g=ctx.createGain(); g.gain.value=gain*.5;
+  s.connect(lp); lp.connect(g); g.connect(L.out); const v=ctx.createGain(); v.gain.value=.22; g.connect(v); v.connect(AU.verb); s.start(t); s.stop(t+2.2); }
+/* maqam Bayati on D, with its half-flat second: D E(half-flat) F G A Bb C D */
+const BAYATI=[0,1.5,3,5,7,8,10,12,13.5,15];
+/* short, repeating Najdi-style phrases that circle the lower notes and come home to D */
+const NAJDI_MOTIFS=[[[4,1],[3,1],[2,1],[3,1],[2,1],[1,1],[0,2]],[[0,1],[1,1],[2,2],[3,1],[2,1],[1,1],[0,1]],[[2,1],[3,1],[4,2],[5,1],[4,1],[3,1],[2,1]],
+  [[4,2],[4,1],[3,1],[2,1],[1,1],[2,2]],[[0,1],[2,1],[1,1],[2,1],[3,2],[2,1],[1,1],[0,1]],[[7,2],[6,1],[5,1],[4,2],[3,1],[2,1]]];
+/* Samri-style rhythm: deep frame-drum strokes, sharp rim strokes and hand claps, eight steps a bar */
+const SAMRI={dum:[0,3,6],tak:[2,5,7],clap:[3,7]};
+function drum(L,t,kind){ const ctx=AU.ctx;
+  if(kind==='dum'){ const o=ctx.createOscillator(), g=ctx.createGain(); o.frequency.setValueAtTime(115,t); o.frequency.exponentialRampToValueAtTime(52,t+.22); g.gain.setValueAtTime(.08,t); g.gain.exponentialRampToValueAtTime(.0001,t+.38);
+    o.connect(g); g.connect(L.out); o.start(t); o.stop(t+.42); noiseHit(t,.05,.016,'lowpass',420,L.out); }
+  else if(kind==='tak') noiseHit(t,.05,.022,'bandpass',2300,L.out);
+  else for(let k=0;k<3;k++) noiseHit(t+k*.009,.07,.016,'bandpass',1250,L.out); }
+function oudStep(L,t){ const e=.3, b=L.step%8;
+  if(L.bar>=1){ if(SAMRI.dum.includes(b)) drum(L,t,'dum'); if(SAMRI.tak.includes(b)) drum(L,t,'tak'); if(L.bar>=2&&SAMRI.clap.includes(b)) drum(L,t,'clap'); }
+  if(L.step%32===0) pluck(L,38,t,.14);
+  if(L.left<=0){ if(!L.q||!L.q.length){ const mo=NAJDI_MOTIFS[RND()*NAJDI_MOTIFS.length|0]; L.q=mo.concat(RND()<.55?mo:[]).concat([[0,4],[null,2]]).map(a=>a.slice()); }
+    const [deg,len]=L.q.shift(); L.left=len;
+    if(deg!=null){ const m=50+BAYATI[deg]; pluck(L,m,t,.22);
+      /* a tremolo (riysha) on held notes */
+      if(len>=2) for(let k=1;k<len*2;k++) if(len>=4||RND()<.45) pluck(L,m,t+k*e/2,.09); } }
+  L.left--; L.step++; if(L.step%8===0) L.bar++; L.next=t+e; }
+function oudSetup(L){ const ctx=AU.ctx; L.step=0; L.bar=0; L.left=0; L.q=null; L.next=ctx.currentTime+.3; L.timers.push(setInterval(()=>{ while(L.next<ctx.currentTime+.3) oudStep(L,L.next); },60)); }
+function layerStop(){ if(!AU.layer) return; const L=AU.layer; AU.layer=null; fadeOut(L.out,L.nodes,L.timers); }
+/* ---------- Other visitors and staff (fixed, so every viewer sees the same shop) ---------- */
+const OCC=[];
+const claim=(x,z,r)=>OCC.push({x,z,r});
+const ADULT=.31, KID=.2;
+/* staff wear a bright teal vest with gold bands and a name badge */
+const VEST=lam(0x12a08a), VEST_BAND=lam(0xe3b341), BADGE=lam(0xffffff);
+function staff(o){ const g=person(Object.assign({sex:'m',robe:T.W,ghutra:1,beard:1},o));
+  const up=g.children.find(c=>c.isGroup)||g;
+  const vest=new THREE.Mesh(new THREE.CylinderGeometry(.238,.236,.5,24,1,true),new THREE.MeshLambertMaterial({color:0x12a08a,side:THREE.DoubleSide})); vest.scale.z=.78; vest.position.y=1.13; g.add(vest);
+  [.96,1.24].forEach(y=>{ const b=new THREE.Mesh(new THREE.CylinderGeometry(.241,.241,.045,24,1,true),new THREE.MeshLambertMaterial({color:0xe3b341,side:THREE.DoubleSide})); b.scale.z=.78; b.position.y=y; g.add(b); });
+  box(.09,.055,.01,BADGE,-.09,1.12,.19,g); return g; }
+[
+  {sex:'f',robe:0x141416,x:-2.0,z:.75,rot:0,prop:'shoulder'},
+  {sex:'m',robe:T.W,ghutra:1,beard:1,x:1.05,z:.75,rot:.2},
+  {sex:'m',robe:T.BEI,tails:1,beard:1,sandal:1,x:-3.6,z:-3.55,rot:Math.PI},
+  {sex:'f',robe:0x3f5b6c,scarf:0x141416,x:-5.85,z:-.6,rot:-HP},
+  {sex:'m',robe:T.GRY,x:5.7,z:2.15,rot:-.2}
+].forEach(o=>{ person(o); claim(o.x,o.z,ADULT); });
+/* the salesperson behind the till, facing the shop, and a second staff member helping by the screen */
+staff({x:4.95,z:3.75,rot:Math.PI+.3}); claim(4.95,3.75,ADULT);
+staff({x:.85,z:-.05,rot:-.5,robe:T.W,beard:0}); claim(.85,-.05,ADULT);
+/* visitors who walk between the displays and stop to look; they wait for you if you are in the way */
+const MOVERS=[];
+function mover(cfg,route){ const [x,z]=route[0]; const g=person(Object.assign({},cfg,{x,z}));
+  MOVERS.push({g,x,z,r:ADULT,route,i:1,wait:0,hold:RND()*3,yaw:0,face:null,v:.55+RND()*.15}); }
+mover({sex:'m',robe:T.GRY,beard:1,skin:1},[[-3.6,-.2,5,Math.PI],[-1.5,-.2],[-1.5,-3.0],[-.4,-3.0],[-.4,-3.55,6,Math.PI],[-.4,-3.0],[-1.5,-3.0],[-1.5,-.2]]);
+mover({sex:'f',robe:0x22304a,scarf:0x141416,niqab:1,prop:'shoulder'},[[-3.4,3.3],[-1.6,3.3],[-1.6,2.75,5,Math.PI],[-1.6,3.3],[1.6,3.3],[1.6,2.75,6,Math.PI],[1.6,3.3],[.2,3.3],[.2,3.85,5,0],[.2,3.3]]);
+mover({sex:'m',robe:T.W,ghutra:1,beard:1,skin:2},[[5.6,-.2],[5.6,-1.4,5,HP],[5.6,-3.0],[3.8,-3.0],[3.8,-3.55,6,Math.PI],[3.8,-3.0],[5.6,-3.0],[5.6,-.2],[3.6,-.2,5,Math.PI],[5.6,-.2]]);
+function moversUpdate(dt){
+  MOVERS.forEach(m=>{
+    let want=null;
+    if(m.hold>0){ m.hold-=dt; if(m.face!=null) want=m.face; }
+    else { const tg=m.route[m.i]; let dx=tg[0]-m.x, dz=tg[1]-m.z; const d=Math.hypot(dx,dz);
+      if(d<.04){ m.x=tg[0]; m.z=tg[1]; if(tg[2]){ m.hold=tg[2]+RND()*3; m.face=tg[3]; } else m.face=null; m.i=(m.i+1)%m.route.length; }
+      else { dx/=d; dz/=d; const st=Math.min(d,m.v*dt), nx=m.x+dx*st, nz=m.z+dz*st;
+        const busy=(S.step==='station'&&Math.hypot(cam.x-nx,cam.z-nz)<.62)||MOVERS.some(o=>o!==m&&Math.hypot(o.x-nx,o.z-nz)<.62&&Math.hypot(o.x-nx,o.z-nz)<Math.hypot(o.x-m.x,o.z-m.z));
+        if(busy){ m.wait+=dt; if(m.wait>2.5){ m.wait=0; m.i=(m.i-1+m.route.length)%m.route.length; } }
+        else { m.wait=0; m.x=nx; m.z=nz; want=Math.atan2(dx,dz); } } }
+    if(want!=null){ let dy=want-m.yaw; dy=Math.atan2(Math.sin(dy),Math.cos(dy)); m.yaw+=clamp(dy,-3*dt,3*dt); }
+    m.g.position.set(m.x,0,m.z); m.g.rotation.y=m.yaw; });
+}
+/* a mother and her daughter looking at the back counter */
+family([{sex:'f',robe:0x2c3e5c,scarf:0x3d5578,trim:1,pose:['rest','hold'],x:-.3,skin:2},{kid:1,kind:'girl',color:0xc9a0dc,pose:['kidHold','kidRest'],x:.3,skin:2}],2.0,-3.55,Math.PI);
+claim(2.3,-3.55,ADULT); claim(1.7,-3.55,KID);
+
+/* ---------- Audio: soft shop murmur, optional calming music ---------- */
+function ambienceStart(){
+  if(!AU.ctx||AU.amb) return; const ctx=AU.ctx;
+  const out=ctx.createGain(); out.gain.value=0; out.connect(AU.master); out.gain.linearRampToValueAtTime(1,ctx.currentTime+1.5);
+  const n1=brownSrc(), bp=ctx.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=650; bp.Q.value=.9; const g1=ctx.createGain(); g1.gain.value=.09; n1.connect(bp); bp.connect(g1); g1.connect(out);
+  const lfo=ctx.createOscillator(); lfo.frequency.value=.13; const lg=ctx.createGain(); lg.gain.value=.04; lfo.connect(lg); lg.connect(g1.gain); lfo.start();
+  const n2=brownSrc(), lp=ctx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=110; const g2=ctx.createGain(); g2.gain.value=.06; n2.connect(lp); lp.connect(g2); g2.connect(out);
+  const A={out,nodes:[n1,lfo,n2],timers:[]};
+  /* now and then a soft clink of ceramics or a paper bag */
+  const clink=()=>{ if(AU.amb!==A) return; const t=ctx.currentTime+.05, f=1800+RND()*900, pan=RND()*1.4-.7;
+    tone({freq:f,t,dur:.35,gain:.02,dest:out,verb:.5,pan}); if(RND()<.5) tone({freq:f*1.5,t:t+.07,dur:.25,gain:.012,dest:out,verb:.5,pan});
+    A.timers.push(setTimeout(clink,4000+RND()*7000)); };
+  A.timers.push(setTimeout(clink,2500));
+  AU.amb=A;
+}
+function ambienceStop(){ if(!AU.amb) return; const a=AU.amb; AU.amb=null; fadeOut(a.out,a.nodes,a.timers); }
+function tillBeep(){ if(!AU.ctx) return; const t=AU.ctx.currentTime+.03; tone({freq:1560,t,dur:.12,gain:.06}); tone({freq:1560,t:t+.18,dur:.12,gain:.06}); }
+
+/* ---------- Walking ---------- */
+const keys={}, pad={};
+const MOVE_KEYS=['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright'];
+addEventListener('keydown',e=>{ if(S.step!=='station') return; const k=e.key.toLowerCase();
+  if(k==='escape'&&S.inspecting){ closeCard(); return; }
+  if((k==='e'||k==='enter')&&!S.inspecting){ const p=pickAt(0,0); if(p) openCard(p); else toast('Face an item and come closer to look at it.',2500); e.preventDefault(); return; }
+  if(MOVE_KEYS.includes(k)){ keys[k]=true; e.preventDefault(); } });
+addEventListener('keyup',e=>{ keys[e.key.toLowerCase()]=false; });
+let drag=null;
+canvas.addEventListener('pointerdown',e=>{ if(S.step!=='station') return; drag={x:e.clientX,y:e.clientY,x0:e.clientX,y0:e.clientY,id:e.pointerId}; canvas.setPointerCapture(e.pointerId); });
+canvas.addEventListener('pointermove',e=>{
+  if(drag&&drag.id===e.pointerId){ cam.yaw-=(e.clientX-drag.x)*.0045; cam.pitch=clamp(cam.pitch-(e.clientY-drag.y)*.0035,-.9,.5); drag.x=e.clientX; drag.y=e.clientY; return; }
+  if(S.step==='station'&&!S.inspecting) hoverAt(e.clientX,e.clientY); });
+canvas.addEventListener('pointerup',e=>{ const d=drag; drag=null; if(!d||S.step!=='station'||S.inspecting) return;
+  if(Math.hypot(e.clientX-d.x0,e.clientY-d.y0)<6){ const r=canvas.getBoundingClientRect(); const p=pickAt((e.clientX-r.left)/r.width*2-1,-((e.clientY-r.top)/r.height*2-1),true); if(p) openCard(p); } });
+canvas.addEventListener('pointercancel',()=>{ drag=null; });
+document.querySelectorAll('#pad button').forEach(b=>{ const d=b.dataset.d;
+  b.addEventListener('pointerdown',e=>{ pad[d]=true; b.setPointerCapture(e.pointerId); e.preventDefault(); });
+  ['pointerup','pointercancel','lostpointercapture'].forEach(t=>b.addEventListener(t,()=>{ pad[d]=false; })); });
+const BODY=.22;
+function blocked(x,z){ if(inRect(x,z,BODY)) return true;
+  if(MOVERS.some(o=>{ const dn=Math.hypot(o.x-x,o.z-z); return dn<o.r+BODY&&dn<Math.hypot(o.x-cam.x,o.z-cam.z); })) return true; return OCC.some(o=>Math.hypot(o.x-x,o.z-z)<o.r+BODY&&Math.hypot(o.x-x,o.z-z)<Math.hypot(o.x-cam.x,o.z-cam.z)); }
+const TILL={x:4.5,z:2.0};
+function move(dt){
+  const fwd=(keys.w||keys.arrowup||pad.up?1:0)-(keys.s||keys.arrowdown||pad.down?1:0), str=(keys.d?1:0)-(keys.a?1:0);
+  const turn=(keys.arrowleft||pad.left?1:0)-(keys.arrowright||pad.right?1:0);
+  cam.yaw+=turn*1.6*dt;
+  const r=S.run;
+  if(r){ const zone=cam.z>.6?'front':cam.z<-2.4?'back':'middle'; r.zoneSec[zone]+=dt; if(zone==='back') r.wentBack=true;
+    const nearTill=Math.hypot(cam.x-TILL.x,cam.z-TILL.z)<1.5; const pb=$('#payBtn'); if(pb.hidden===nearTill){ pb.hidden=!nearTill; } }
+  if(!fwd&&!str) return;
+  const sp=1.3*dt, sy=Math.sin(cam.yaw), cy=Math.cos(cam.yaw);
+  const dx=(-sy*fwd+cy*str)*sp, dz=(-cy*fwd-sy*str)*sp;
+  let nx=cam.x+dx, nz=cam.z+dz;
+  if(blocked(nx,nz)){ const tries=[.5,-.5,1.0,-1.0,1.4,-1.4].map(a=>[cam.x+dx*Math.cos(a)-dz*Math.sin(a),cam.z+dx*Math.sin(a)+dz*Math.cos(a)]).concat([[cam.x+dx,cam.z],[cam.x,cam.z+dz]]);
+    const ok=tries.find(([x,z])=>!blocked(x,z)); if(ok){ nx=ok[0]; nz=ok[1]; } else { nx=cam.x; nz=cam.z; } }
+  if(r) r.distance+=Math.hypot(nx-cam.x,nz-cam.z);
+  cam.x=nx; cam.z=nz;
+}
+
+/* ---------- Looking at products ---------- */
+const ray=new THREE.Raycaster(), v2=new THREE.Vector2();
+const REACH=2.6;
+function pickAt(nx,ny,tell){ v2.set(nx,ny); ray.setFromCamera(v2,camera); const hit=ray.intersectObjects(HOVERABLE,false)[0];
+  if(!hit) return null; const p=PBY[hit.object.userData.pid];
+  if(Math.hypot(p.g.position.x-cam.x,p.g.position.z-cam.z)>REACH){ if(tell) toast('Walk a little closer to look at it.',2200); return null; } return p; }
+let hovered=null, lastHover=0;
+function setGlow(p,on){ if(!p) return; p.g.traverse(o=>{ if(o.isMesh){ (Array.isArray(o.material)?o.material:[o.material]).forEach(m=>{ if(m.emissive) m.emissive.setHex(on?0x2a2014:0x000000); }); } }); }
+function hoverAt(cx,cy){ const now=performance.now(); if(now-lastHover<80) return; lastHover=now;
+  const r=canvas.getBoundingClientRect(); const p=pickAt((cx-r.left)/r.width*2-1,-((cy-r.top)/r.height*2-1),false);
+  if(p!==hovered){ setGlow(hovered,false); hovered=p; setGlow(p,true); canvas.style.cursor=p?'pointer':''; } }
+const basket=[];
+const spent=()=>basket.reduce((a,id)=>a+PBY[id].price,0);
+function renderBasket(){ const b=$('#basket'); b.querySelector('.bn').textContent=`${basket.length} ${basket.length===1?'item':'items'}`;
+  b.querySelector('.bs').textContent=`${spent()} of ${BUDGET} SAR`; b.querySelector('.bar i').style.width=`${Math.min(100,spent()/BUDGET*100)}%`;
+  $('#payBtn').textContent=basket.length?`Pay ${spent()} SAR and leave`:'Leave without buying';
+  const ul=$('#blist'); ul.innerHTML=basket.length?basket.map(id=>{ const p=PBY[id]; return `<li><span class="nm"><b>${p.en}</b><span>${p.price} SAR</span></span><button type="button" data-rm="${id}" aria-label="Remove ${p.en}">Remove</button></li>`; }).join('')
+    :'<li class="empty">Your basket is empty.</li>';
+  ul.querySelectorAll('button[data-rm]').forEach(b=>b.onclick=()=>removeFromBasket(b.dataset.rm,'basket')); }
+/* ---------- The digital screen: browse and buy experiences ---------- */
+let kioskTab='workshops';
+function openKiosk(){ const r=S.run; S.inspecting='kiosk'; setGlow(hovered,false); hovered=null; canvas.style.cursor=''; Object.keys(keys).forEach(k=>keys[k]=false);
+  if(r){ r.kioskOpens++; r.kioskOpenAt=performance.now(); r.kioskTabs[kioskTab]=(r.kioskTabs[kioskTab]||0)+1; }
+  const c=$('#pcard'); c.classList.add('kiosk'); c.hidden=false; renderKiosk(); }
+function renderKiosk(msg){ const r=S.run, c=$('#pcard');
+  c.innerHTML=`<div class="ph"><div><p class="eyebrow">Discover more · اكتشف المزيد</p><h3>Experiences you can book here</h3></div><button class="btn ghost" id="kclose">Close</button></div>
+    <div class="ktabs" role="tablist">${EXP_TABS.map(([k,en,ar])=>`<button type="button" role="tab" aria-selected="${k===kioskTab}" data-tab="${k}">${en}<span lang="ar">${ar}</span></button>`).join('')}</div>
+    ${msg?`<p class="msg warn">${msg}</p>`:''}
+    <ul class="klist">${EXPERIENCES.filter(e=>e.cat===kioskTab).map(e=>{ const inB=basket.includes(e.id); return `<li><div class="kt"><b>${e.en}</b><span class="ar" lang="ar" dir="rtl">${e.ar}</span><span class="km">${e.meta}</span><span class="kd">${e.desc}</span></div>
+      <div class="kb"><span class="pp">${e.price} <span>SAR</span></span><button type="button" class="btn${inB?' ghost':''}" data-x="${e.id}">${inB?'Remove':'Add'}</button></div></li>`; }).join('')}</ul>`;
+  $('#kclose').onclick=closeCard;
+  c.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{ kioskTab=b.dataset.tab; if(r) r.kioskTabs[kioskTab]=(r.kioskTabs[kioskTab]||0)+1; renderKiosk(); });
+  c.querySelectorAll('[data-x]').forEach(b=>b.onclick=()=>{ const e=PBY[b.dataset.x];
+    if(basket.includes(e.id)){ removeFromBasket(e.id,'screen'); renderKiosk(); return; }
+    if(spent()+e.price>BUDGET){ if(r) r.overBudgetTries++; renderKiosk(`${e.en} would take you over your ${BUDGET} SAR budget. You have ${BUDGET-spent()} SAR left. You can remove something from your basket to make room.`); return; }
+    basket.push(e.id); if(r){ r.events.push({t:+((performance.now()-r.tEnter)/1000).toFixed(1),act:'add',id:e.id,from:'screen'}); if(r.firstPickAt==null) r.firstPickAt=(performance.now()-r.tEnter)/1000; }
+    renderBasket(); toast(`${e.en} added to your basket.`,2200); renderKiosk(); });
+}
+function removeFromBasket(id,src){ const i=basket.indexOf(id); if(i<0) return; basket.splice(i,1); const r=S.run;
+  if(r){ r.events.push({t:+((performance.now()-r.tEnter)/1000).toFixed(1),act:'remove',id,from:src}); r.putBack++; }
+  renderBasket(); toast(`${PBY[id].en} removed from your basket.`,2200); }
+$('#bview').onclick=()=>{ const ul=$('#blist'), open=ul.hidden; ul.hidden=!open; $('#bview').setAttribute('aria-expanded',String(open)); $('#bview').textContent=open?'Hide basket':'View basket'; if(open&&S.run) S.run.basketViews=(S.run.basketViews||0)+1; };
+function openCard(p){
+  if(p.id==='kiosk'){ openKiosk(); return; }
+  const r=S.run; S.inspecting=p.id; setGlow(hovered,false); hovered=null; canvas.style.cursor='';
+  Object.keys(keys).forEach(k=>keys[k]=false);
+  if(r){ const v=r.views[p.id]||(r.views[p.id]={opens:0,seconds:0}); v.opens++; r.cardsOpened++; r.cardOpenAt=performance.now(); }
+  const c=$('#pcard'), inB=basket.includes(p.id), showLabel=p.local&&S.info!=='plain', showStory=p.local&&S.info==='story';
+  c.innerHTML=`<div class="ph"><div><p class="eyebrow">${CATS[p.cat]}</p><h3>${p.en}</h3><p class="ar" lang="ar" dir="rtl">${p.ar}</p></div><p class="pp">${p.price} <span>SAR</span></p></div>
+    ${showLabel?'<p class="lab"><span>Handmade in Saudi Arabia</span><span lang="ar" dir="rtl">صناعة يدوية سعودية</span></p>':''}
+    ${showStory?`<div class="story"><p class="eyebrow">Meet the maker</p><p>${p.story}</p></div>`:''}
+    <p class="msg warn" id="pmsg" hidden></p>
+    <div class="row"><button class="btn" id="padd">${inB?'Put it back':'Add to basket'}</button><button class="btn ghost" id="pclose">Close</button></div>`;
+  c.hidden=false;
+  $('#padd').onclick=()=>{ const i=basket.indexOf(p.id);
+    if(i>=0){ closeCard(); removeFromBasket(p.id,'shelf'); return; }
+    if(spent()+p.price>BUDGET){ const m=$('#pmsg'); m.hidden=false; m.textContent=`This would take you over your ${BUDGET} SAR budget. You have ${BUDGET-spent()} SAR left. You can remove something from your basket to make room.`; if(r) r.overBudgetTries++; return; }
+    basket.push(p.id); if(r){ r.events.push({t:+((performance.now()-r.tEnter)/1000).toFixed(1),act:'add',id:p.id}); if(r.firstPickAt==null) r.firstPickAt=(performance.now()-r.tEnter)/1000; }
+    renderBasket(); closeCard(); toast(`${p.en} added to your basket.`,2200); };
+  $('#pclose').onclick=closeCard;
+  $('#padd').focus({preventScroll:true});
+}
+function closeCard(){ const r=S.run, id=S.inspecting;
+  if(id==='kiosk'){ if(r&&r.kioskOpenAt){ r.kioskSec+=(performance.now()-r.kioskOpenAt)/1000; r.kioskOpenAt=null; } S.inspecting=null; $('#pcard').hidden=true; $('#pcard').classList.remove('kiosk'); return; }
+  if(r&&id&&r.cardOpenAt){ const s=(performance.now()-r.cardOpenAt)/1000; r.views[id].seconds+=s; r.cardSec+=s; r.cardOpenAt=null; }
+  S.inspecting=null; $('#pcard').hidden=true; canvas.focus&&canvas.focus(); }
+
+/* ---------- Render loop ---------- */
+let last=performance.now();
+function frame(now){
+  const dt=Math.min(.05,(now-last)/1000); last=now;
+  if(S.step==='station'&&!S.inspecting) move(dt);
+  else if(S.step!=='station'&&!S.run&&!reduceMotion) cam.yaw=Math.sin(now/1000*.07)*.3;
+  moversUpdate(dt);
+  camera.position.set(cam.x,1.62,cam.z); camera.rotation.set(cam.pitch,cam.yaw,0);
+  renderer.render(scene,camera);
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+if(document.fonts&&document.fonts.load){
+  Promise.all([document.fonts.load(`600 40px "IBM Plex Sans"`),document.fonts.load(`600 40px "IBM Plex Sans Arabic"`,'متجر المتحف صناعة يدوية سعودية')])
+    .then(()=>{ SIGN_TEX.forEach(redraw); }).catch(()=>{});
+}
+
+/* ---------- Participant flow ---------- */
+const ov=$('#ov'), card=$('#card');
+let toastTimer=null;
+function toast(msg,ms){ const t=$('#toast'); t.textContent=msg; t.hidden=false; clearTimeout(toastTimer); toastTimer=setTimeout(()=>{ t.hidden=true; },ms||5000); }
+const VIEWS={
+  welcome:{
+    html:()=>`<h1>The museum shop</h1>
+      <p>You have just finished your visit to the <strong>Saudi National Museum</strong> in Riyadh. On your way out you step into the museum shop.</p>
+      <p>Imagine you have <strong>${BUDGET} SAR</strong> to spend on souvenirs or gifts. Look around, pick anything you would like to buy, including experiences from the digital screen, then pay at the till by the exit. You can also leave without buying anything.</p>
+      <dl class="facts"><div><dt>Time</dt><dd>About 3 to 5 minutes</dd></div><div><dt>Sound</dt><dd>Headphones work best</dd></div><div><dt>Device</dt><dd>Laptop or desktop</dd></div></dl>
+      <ul class="plain"><li>Drag the screen to look around</li><li>Use <strong>W A S D</strong> or the arrow keys to walk and turn</li><li>Click an item to look at it closely, or face it and press <strong>E</strong></li><li>On a phone or tablet, use the arrows in the corner and tap an item</li></ul>
+      <div class="row"><button class="btn" id="go">Enter the shop</button></div>`,
+    bind(){ $('#go').onclick=()=>{ audioInit(); enterShop(); }; }
+  },
+  questions:{
+    html:()=>{
+      const scaleQ=(n,q,lo,hi)=>`<fieldset class="q" id="f-${n}"><legend>${q}</legend><div class="scale">${[1,2,3,4,5,6,7].map(v=>`<label><input type="radio" name="${n}" id="${n}-${v}" value="${v}"><span>${v}</span></label>`).join('')}</div><div class="ends"><span>1 = ${lo}</span><span>7 = ${hi}</span></div></fieldset>`;
+      const choiceQ=(n,q,o)=>`<fieldset class="q" id="f-${n}"><legend>${q}</legend><div class="choices">${o.map(([v,l],i)=>`<label><input type="radio" name="${n}" id="${n}-${i}" value="${v}"><span>${l}</span></label>`).join('')}</div></fieldset>`;
+      return `<p class="eyebrow">You left the shop</p><h2>A few questions about the shop</h2>
+      <p>Answer from your experience in the shop. There are no right or wrong answers.</p>
+      <form id="qform" novalidate>
+        ${scaleQ('satisfied','How satisfied are you with what you chose?','Not at all satisfied','Very satisfied')}
+        ${scaleQ('pleasant','How pleasant was the shop?','Not at all pleasant','Very pleasant')}
+        ${scaleQ('authentic','How authentic did the products feel?','Not at all authentic','Very authentic')}
+        ${scaleQ('meaning','How well did the products reflect Saudi culture?','Not at all','Very well')}
+        <fieldset class="q" id="f-wtp"><legend>What is the most you would pay for the brass dallah coffee pot?</legend>
+          <div class="dur"><input id="wtp" type="number" min="0" max="5000" inputmode="numeric" aria-label="Amount in SAR"><label for="wtp">SAR</label></div></fieldset>
+        ${scaleQ('expInterest','How interested would you be in booking a workshop, performance or heritage site visit from a museum shop?','Not at all interested','Very interested')}
+        ${choiceQ('noticed','Did you notice any labels saying how the products were made?',[['yes','Yes'],['no','No'],['unsure','Not sure']])}
+        ${choiceQ('forWhom','Who were the things you chose for?',[['self','Myself'],['family','Family'],['friends','Friends'],['work','Colleagues'],['mixed','A mix'],['none','I did not buy anything']])}
+        <fieldset class="q" id="f-est"><legend>How long do you think you spent in the shop?</legend>
+          <div class="dur"><input id="em" type="number" min="0" max="30" inputmode="numeric" aria-label="Minutes"><label for="em">min</label><input id="es" type="number" min="0" max="59" inputmode="numeric" aria-label="Seconds"><label for="es">sec</label></div></fieldset>
+        <p id="qerr" class="err" role="alert" hidden></p>
+        <div class="row"><button class="btn" type="submit">Finish</button></div>
+      </form>`;
+    },
+    bind(){
+      $('#qform').onsubmit=e=>{ e.preventDefault();
+        const val=n=>{ const x=card.querySelector(`input[name="${n}"]:checked`); return x?x.value:null; };
+        const em=$('#em').value, es=$('#es').value, w=$('#wtp').value;
+        const A={ satisfaction:+val('satisfied')||null, shopPleasant:+val('pleasant')||null, perceivedAuthenticity:+val('authentic')||null, culturalMeaning:+val('meaning')||null, interestInExperiences:+val('expInterest')||null,
+          wtpDallahSAR:w===''?null:+w, noticedMadeLabels:val('noticed'), boughtFor:val('forWhom'),
+          estimatedSecondsInShop:(em===''&&es==='')?null:(+em||0)*60+(+es||0) };
+        const req=[['satisfied','satisfaction','how satisfied you are'],['pleasant','shopPleasant','the shop'],['authentic','perceivedAuthenticity','authenticity'],['meaning','culturalMeaning','Saudi culture'],['expInterest','interestInExperiences','booking experiences'],
+          ['wtp','wtpDallahSAR','the dallah price'],['noticed','noticedMadeLabels','labels'],['forWhom','boughtFor','who the things were for'],['est','estimatedSecondsInShop','time in the shop']];
+        const miss=req.filter(([f,k])=>A[k]==null);
+        card.querySelectorAll('fieldset.q').forEach(f=>f.classList.remove('missing')); miss.forEach(([f])=>$('#f-'+f).classList.add('missing'));
+        const err=$('#qerr');
+        if(miss.length){ err.hidden=false; err.textContent=`Please answer every question. Still missing: ${miss.map(m=>m[2]).join(', ')}.`; $('#f-'+miss[0][0]).scrollIntoView({block:'center',behavior:reduceMotion?'auto':'smooth'}); return; }
+        S.answers=A; go('done'); };
+    }
+  },
+  done:{
+    html:()=>`<h2>Thank you</h2>
+      <div class="row"><button class="btn" id="again">Run again</button></div>`,
+    bind(){ try{ window.parent&&window.parent!==window&&window.parent.postMessage({type:'museum-shop',data:collect()},'*'); }catch(e){}
+      $('#again').onclick=()=>{ location.reload(); }; }
+  }
+};
+function collect(){
+  const r=S.run||{}, items=basket.map(id=>PBY[id]), tot=items.reduce((a,p)=>a+p.price,0), loc=items.filter(p=>p.local), locSpend=loc.reduce((a,p)=>a+p.price,0);
+  const views={}; Object.keys(r.views||{}).forEach(k=>views[k]={opens:r.views[k].opens,seconds:+r.views[k].seconds.toFixed(1),category:PBY[k].cat,local:!!PBY[k].local,zone:PBY[k].zone,area:PBY[k].area});
+  return {
+    study:'museum-shop-saudi-national-museum', version:1, completedAt:new Date().toISOString(),
+    condition:{ productInfo:S.info, productInfoLabel:INFO[S.info], localCraftsPlacement:S.place, placementLabel:PLACE[S.place], sound:S.sound, soundLabel:SOUNDS[S.sound], lighting:S.light, lightingLabel:LIGHTS[S.light]?LIGHTS[S.light].label:'Custom', colourTemperatureK:S.k, brightnessLevel:+S.lvl.toFixed(2), assignedBy:S.assignedBy, budgetSAR:BUDGET },
+    device:{ coarsePointer:coarse, screen:`${screen.width}x${screen.height}`, viewport:`${innerWidth}x${innerHeight}` },
+    visit:{ secondsInShop:r.leftAt?+((r.leftAt-r.tEnter)/1000).toFixed(1):null, secondsToFirstPick:r.firstPickAt!=null?+r.firstPickAt.toFixed(1):null,
+      metresWalked:+(r.distance||0).toFixed(1), wentToBackOfShop:!!r.wentBack,
+      secondsAtFront:+((r.zoneSec||{}).front||0).toFixed(1), secondsInMiddle:+((r.zoneSec||{}).middle||0).toFixed(1), secondsAtBack:+((r.zoneSec||{}).back||0).toFixed(1),
+      productsLookedAt:Object.keys(views).length, timesItemsOpened:r.cardsOpened||0, secondsLookingAtItems:+(r.cardSec||0).toFixed(1), itemViews:views,
+      timesScreenOpened:r.kioskOpens||0, secondsAtScreen:+(r.kioskSec||0).toFixed(1), screenTabViews:r.kioskTabs||{}, timesPutBack:r.putBack||0, timesBasketOpened:r.basketViews||0, triedToGoOverBudget:r.overBudgetTries||0, basketEvents:r.events||[] },
+    purchase:{ items:items.map(p=>({id:p.id,name:p.en,type:p.experience?'experience':'product',category:CATS[p.cat],priceSAR:p.price,handmadeLocal:!!p.local,zone:p.zone,area:p.area})),
+      byCategory:Object.fromEntries(Object.keys(CATS).map(c=>{ const it=items.filter(p=>p.cat===c); return [CATS[c],{items:it.length,spendSAR:it.reduce((a,p)=>a+p.price,0)}]; })), itemCount:items.length, totalSAR:tot,
+      experiencesBought:items.filter(p=>p.experience).length, experienceSpendSAR:items.filter(p=>p.experience).reduce((a,p)=>a+p.price,0), handmadeItems:loc.length, handmadeSpendSAR:locSpend, handmadeShareOfSpend:tot?+(locSpend/tot).toFixed(2):null, boughtNothing:items.length===0 },
+    answers:S.answers||{}
+  };
+}
+function go(step){
+  S.step=step; const inShop=step==='station';
+  ov.hidden=inShop; $('#hud').hidden=!inShop; $('#basket').hidden=!inShop; $('#pad').hidden=!(inShop&&coarse);
+  if(!inShop){ $('#toast').hidden=true; $('#payBtn').hidden=true; $('#pcard').hidden=true; }
+  const v=VIEWS[step]; if(v){ card.innerHTML=v.html(); v.bind&&v.bind(); card.scrollTop=0; card.focus({preventScroll:true}); }
+}
+function resetShop(){ cam.x=-4; cam.z=4.1; cam.yaw=-.35; cam.pitch=-.12; basket.length=0; renderBasket(); $('#blist').hidden=true; $('#bview').textContent='View basket'; $('#bview').setAttribute('aria-expanded','false'); $('#fade').style.opacity=0; }
+function enterShop(){
+  audioInit(); resetShop();
+  S.run={ tEnter:performance.now(), leftAt:null, distance:0, zoneSec:{front:0,middle:0,back:0}, wentBack:false, views:{}, cardsOpened:0, cardSec:0, cardOpenAt:null,
+    events:[], putBack:0, overBudgetTries:0, firstPickAt:null, kioskOpens:0, kioskSec:0, kioskOpenAt:null, kioskTabs:{} };
+  go('station'); ambienceStart(); layerStart(S.sound);
+  toast(coarse?'Drag to look around. Tap an item to look at it.':'Drag to look around. Click an item to look at it closely.',6000);
+}
+$('#payBtn').onclick=()=>{ const r=S.run; if(!r||r.leftAt) return; if(S.inspecting) closeCard(); r.leftAt=performance.now(); tillBeep();
+  const f=$('#fade'); f.style.transition='opacity .8s'; f.style.opacity=1;
+  setTimeout(()=>{ ambienceStop(); layerStop(); go('questions'); f.style.transition=''; f.style.opacity=0; },900); };
+
+/* ---------- Researcher panel ---------- */
+const rp=$('#rpanel'), rb=$('#rbtn');
+function syncPanel(){
+  document.querySelectorAll('#rinfo button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.v===S.info)));
+  document.querySelectorAll('#rplace button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.v===S.place)));
+  document.querySelectorAll('#rmusic button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.v===S.sound)));
+  document.querySelectorAll('#rlight button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.v===S.light)));
+  $('#rk').value=S.k; $('#rko').textContent=`${S.k} K`; $('#rl').value=Math.round(S.lvl*100); $('#rlo').textContent=`${Math.round(S.lvl*100)}%`;
+  $('#rcode').textContent=LIGHTS[S.light]?`#${S.info}-${S.place}-${S.sound}-${S.light}`:'a preset (custom lighting has no link)';
+}
+rb.onclick=()=>{ rp.hidden=!rp.hidden; rb.setAttribute('aria-expanded',String(!rp.hidden)); if(!rp.hidden) syncPanel(); };
+$('#rclose').onclick=()=>{ rp.hidden=true; rb.setAttribute('aria-expanded','false'); rb.focus(); };
+document.querySelectorAll('#rinfo button').forEach(b=>b.onclick=()=>{ S.info=b.dataset.v; S.assignedBy='researcher'; layoutProducts(); syncPanel(); });
+document.querySelectorAll('#rplace button').forEach(b=>b.onclick=()=>{ S.place=b.dataset.v; S.assignedBy='researcher'; layoutProducts(); syncPanel(); });
+document.querySelectorAll('#rmusic button').forEach(b=>b.onclick=()=>{ S.sound=b.dataset.v; S.assignedBy='researcher'; if(S.step==='station'){ audioInit(); layerStart(S.sound); } syncPanel(); });
+document.querySelectorAll('#rlight button').forEach(b=>b.onclick=()=>{ S.light=b.dataset.v; S.k=LIGHTS[S.light].k; S.lvl=LIGHTS[S.light].lvl; S.assignedBy='researcher'; applyLighting(); syncPanel(); });
+$('#rk').oninput=e=>{ S.k=+e.target.value; S.light='custom'; S.assignedBy='researcher'; applyLighting(); syncPanel(); };
+$('#rl').oninput=e=>{ S.lvl=e.target.value/100; S.light='custom'; S.assignedBy='researcher'; applyLighting(); syncPanel(); };
+$('#rskip').onclick=()=>{ enterShop(); };
+renderBasket(); syncPanel(); go('welcome');
+
+})();
+</script>
+</body>
+</html>
