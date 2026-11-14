@@ -1,3 +1,4 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -230,6 +231,13 @@ const $=s=>document.querySelector(s);
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const reduceMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
 const coarse=matchMedia('(pointer: coarse)').matches;
+/* ---------- Study settings ----------
+   SURVEY_URL: paste the Zoho Survey public link here. When it is set, paying at the till sends the participant
+   to that survey with their results added to the link; when it is empty, the shop shows its own questions. */
+const SURVEY_URL='https://survey.zohopublic.sa/zs/cyCsx0';
+/* participant ID from the link, e.g. .../museum-shop/?pid=P017 (letters, numbers, - and _ only) */
+const PID=(()=>{ try{ const v=new URLSearchParams(location.search).get('pid')||''; const c=v.replace(/[^A-Za-z0-9_-]/g,'').slice(0,40); if(c) return c; }catch(e){}
+  return 'anon-'+Math.floor(rnd()*1e8).toString(36); })();
 /* ---------- Conditions ---------- */
 const INFO={ plain:'Price only', label:'"Handmade in Saudi Arabia" label', story:'Label and maker story' };
 const PLACE={ front:'Local crafts at the front', back:'Local crafts at the back' };
@@ -1190,7 +1198,7 @@ function collect(){
   const r=S.run||{}, items=basket.map(id=>PBY[id]), tot=items.reduce((a,p)=>a+p.price,0), loc=items.filter(p=>p.local), locSpend=loc.reduce((a,p)=>a+p.price,0);
   const views={}; Object.keys(r.views||{}).forEach(k=>views[k]={opens:r.views[k].opens,seconds:+r.views[k].seconds.toFixed(1),category:PBY[k].cat,local:!!PBY[k].local,zone:PBY[k].zone,area:PBY[k].area});
   return {
-    study:'museum-shop-saudi-national-museum', version:1, completedAt:new Date().toISOString(),
+    study:'museum-shop-saudi-national-museum', version:1, participantId:PID, completedAt:new Date().toISOString(),
     condition:{ productInfo:S.info, productInfoLabel:INFO[S.info], localCraftsPlacement:S.place, placementLabel:PLACE[S.place], sound:S.sound, soundLabel:SOUNDS[S.sound], lighting:S.light, lightingLabel:LIGHTS[S.light]?LIGHTS[S.light].label:'Custom', colourTemperatureK:S.k, brightnessLevel:+S.lvl.toFixed(2), assignedBy:S.assignedBy, budgetSAR:BUDGET },
     device:{ coarsePointer:coarse, screen:`${screen.width}x${screen.height}`, viewport:`${innerWidth}x${innerHeight}` },
     visit:{ secondsInShop:r.leftAt?+((r.leftAt-r.tEnter)/1000).toFixed(1):null, secondsToFirstPick:r.firstPickAt!=null?+r.firstPickAt.toFixed(1):null,
@@ -1220,7 +1228,15 @@ function enterShop(){
 }
 $('#payBtn').onclick=()=>{ const r=S.run; if(!r||r.leftAt) return; if(S.inspecting) closeCard(); r.leftAt=performance.now(); tillBeep();
   const f=$('#fade'); f.style.transition='opacity .8s'; f.style.opacity=1;
-  setTimeout(()=>{ ambienceStop(); layerStop(); go('questions'); f.style.transition=''; f.style.opacity=0; },900); };
+  setTimeout(()=>{ ambienceStop(); layerStop();
+    if(SURVEY_URL){ try{ window.parent&&window.parent!==window&&window.parent.postMessage({type:'museum-shop',data:collect()},'*'); }catch(e){} location.href=surveyLink(); return; }
+    go('questions'); f.style.transition=''; f.style.opacity=0; },900); };
+/* the participant's main results, as short link parameters matching the survey's custom variables */
+function surveyLink(){ const d=collect(), pu=d.purchase, v=d.visit, c=d.condition;
+  const q={ pid:PID, info:c.productInfo, place:c.localCraftsPlacement, sound:c.sound, light:c.lighting,
+    total:pu.totalSAR, nitems:pu.itemCount, items:pu.items.map(i=>i.id).join('.')||'none', hmspend:pu.handmadeSpendSAR, hmpct:pu.handmadeShareOfSpend==null?0:Math.round(pu.handmadeShareOfSpend*100),
+    expn:pu.experiencesBought, secs:Math.round(v.secondsInShop||0), back:v.wentToBackOfShop?'yes':'no', screen:v.timesScreenOpened };
+  return SURVEY_URL+(SURVEY_URL.includes('?')?'&':'?')+Object.entries(q).map(([k,x])=>k+'='+encodeURIComponent(x)).join('&'); }
 
 /* ---------- Researcher panel ---------- */
 const rp=$('#rpanel'), rb=$('#rbtn');
@@ -1247,3 +1263,5 @@ renderBasket(); syncPanel(); go('welcome');
 </script>
 </body>
 </html>
+
+</body></html>
