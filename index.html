@@ -234,6 +234,9 @@ const coarse=matchMedia('(pointer: coarse)').matches;
    SURVEY_URL: paste the Zoho Survey public link here. When it is set, paying at the till sends the participant
    to that survey with their results added to the link; when it is empty, the shop shows its own questions. */
 const SURVEY_URL='https://survey.zohopublic.sa/zs/cyCsx0';
+/* Researcher mode shows the Researcher panel and keeps test runs out of the survey data.
+   Participants (the GitHub Pages link) never see it; researchers add ?researcher=1 to the link. The claude.ai preview is always researcher mode. */
+const RESEARCH=(()=>{ try{ if(new URLSearchParams(location.search).get('researcher')==='1') return true; }catch(e){} return !/github\.io$/i.test(location.hostname); })();
 /* participant ID from the link, e.g. .../museum-shop/?pid=P017 (letters, numbers, - and _ only) */
 const PID=(()=>{ try{ const v=new URLSearchParams(location.search).get('pid')||''; const c=v.replace(/[^A-Za-z0-9_-]/g,'').slice(0,40); if(c) return c; }catch(e){}
   return 'anon-'+Math.floor(rnd()*1e8).toString(36); })();
@@ -1228,7 +1231,7 @@ function enterShop(){
 $('#payBtn').onclick=()=>{ const r=S.run; if(!r||r.leftAt) return; if(S.inspecting) closeCard(); r.leftAt=performance.now(); tillBeep();
   const f=$('#fade'); f.style.transition='opacity .8s'; f.style.opacity=1;
   setTimeout(()=>{ ambienceStop(); layerStop();
-    if(SURVEY_URL){ try{ window.parent&&window.parent!==window&&window.parent.postMessage({type:'museum-shop',data:collect()},'*'); }catch(e){} location.href=surveyLink(); return; }
+    if(SURVEY_URL&&!RESEARCH){ try{ window.parent&&window.parent!==window&&window.parent.postMessage({type:'museum-shop',data:collect()},'*'); }catch(e){} location.href=surveyLink(); return; }
     go('questions'); f.style.transition=''; f.style.opacity=0; },900); };
 /* the participant's main results, as short link parameters matching the survey's custom variables */
 function surveyLink(){ const d=collect(), pu=d.purchase, v=d.visit, c=d.condition;
@@ -1239,6 +1242,7 @@ function surveyLink(){ const d=collect(), pu=d.purchase, v=d.visit, c=d.conditio
 
 /* ---------- Researcher panel ---------- */
 const rp=$('#rpanel'), rb=$('#rbtn');
+if(!RESEARCH){ rb.hidden=true; rb.disabled=true; rb.setAttribute('aria-hidden','true'); }
 function syncPanel(){
   document.querySelectorAll('#rinfo button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.v===S.info)));
   document.querySelectorAll('#rplace button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.v===S.place)));
